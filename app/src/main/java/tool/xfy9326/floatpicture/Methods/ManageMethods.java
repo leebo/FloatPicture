@@ -9,6 +9,9 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.Gravity;
+
+import androidx.preference.PreferenceManager;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -18,9 +21,13 @@ import tool.xfy9326.floatpicture.MainApplication;
 import tool.xfy9326.floatpicture.Utils.Config;
 import tool.xfy9326.floatpicture.Utils.PictureData;
 import tool.xfy9326.floatpicture.View.FloatImageView;
+import tool.xfy9326.floatpicture.View.FloatToggleButton;
+import tool.xfy9326.floatpicture.R;
 
 
 public class ManageMethods {
+
+    private static FloatToggleButton toggleButton;
 
     public static void SelectPicture(Activity mActivity) {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
@@ -45,7 +52,7 @@ public class ManageMethods {
     private static void StartWin(Context mContext, WindowManager windowManager, PictureData pictureData, String id) {
         pictureData.setDataControl(id);
         Bitmap bitmap = ImageMethods.getShowBitmap(mContext, id);
-        float default_zoom = pictureData.getFloat(Config.DATA_PICTURE_DEFAULT_ZOOM, ImageMethods.getDefaultZoom(mContext, bitmap, false));
+        float default_zoom = pictureData.getFloat(Config.DATA_PICTURE_DEFAULT_ZOOM, ImageMethods.getDefaultZoom(mContext, bitmap, true));
         float zoom = pictureData.getFloat(Config.DATA_PICTURE_ZOOM, default_zoom);
         float picture_degree = pictureData.getFloat(Config.DATA_PICTURE_DEGREE, Config.DATA_DEFAULT_PICTURE_DEGREE);
         float picture_alpha = pictureData.getFloat(Config.DATA_PICTURE_ALPHA, Config.DATA_DEFAULT_PICTURE_ALPHA);
@@ -103,6 +110,7 @@ public class ManageMethods {
             id = o.getKey().toString();
             setWindowVisible(context, pictureData, id, visible);
         }
+        updateToggleButtonIcon(context); // Update toggle button icon when visibility changes
     }
 
     public static void setWindowVisible(Context context, PictureData pictureData, String id, boolean visible) {
@@ -138,6 +146,57 @@ public class ManageMethods {
         boolean over_layout = pictureData.getBoolean(Config.DATA_ALLOW_PICTURE_OVER_LAYOUT, Config.DATA_DEFAULT_ALLOW_PICTURE_OVER_LAYOUT);
         WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(mContext, positionX, positionY, touch_and_move, over_layout);
         getWindowManager(mContext).addView(floatImageView, layoutParams);
+    }
+
+    public static void createToggleButton(Context context) {
+        if (toggleButton == null) {
+            toggleButton = new FloatToggleButton(context);
+            toggleButton.setOnClickListener(v -> {
+                boolean currentVisibility = PreferenceManager.getDefaultSharedPreferences(context)
+                        .getBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, Config.DATA_DEFAULT_GLOBAL_VISIBILITY);
+                boolean newVisibility = !currentVisibility;
+                setAllWindowsVisible(context, newVisibility);
+                PreferenceManager.getDefaultSharedPreferences(context).edit()
+                        .putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, newVisibility).apply();
+                updateToggleButtonIcon(context);
+            });
+
+            WindowManager windowManager = getWindowManager(context);
+            WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(
+                    context,
+                    0,
+                    0,
+                    true,
+                    false
+            );
+            layoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
+            layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+            layoutParams.gravity = Gravity.BOTTOM | Gravity.END;
+            layoutParams.x = (int) context.getResources().getDimension(R.dimen.fab_margin);
+            layoutParams.y = (int) context.getResources().getDimension(R.dimen.fab_margin);
+
+            windowManager.addView(toggleButton, layoutParams);
+            updateToggleButtonIcon(context);
+        }
+    }
+
+    public static void updateToggleButtonIcon(Context context) {
+        if (toggleButton != null) {
+            boolean isVisible = PreferenceManager.getDefaultSharedPreferences(context)
+                    .getBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, Config.DATA_DEFAULT_GLOBAL_VISIBILITY);
+            if (isVisible) {
+                toggleButton.setIcon(R.drawable.ic_visibility, R.string.toggle_visibility);
+            } else {
+                toggleButton.setIcon(R.drawable.ic_visibility_off, R.string.toggle_visibility_off);
+            }
+        }
+    }
+
+    public static void removeToggleButton(Context context) {
+        if (toggleButton != null) {
+            getWindowManager(context).removeView(toggleButton);
+            toggleButton = null;
+        }
     }
 
 }

@@ -49,7 +49,7 @@ public class NotificationService extends Service {
         }
     }
 
-    @SuppressLint({"ForegroundServiceType", "UnspecifiedRegisterReceiverFlag"})
+    @SuppressLint({"ForegroundServiceType"})
     @Override
     public void onCreate() {
         super.onCreate();
@@ -58,7 +58,11 @@ public class NotificationService extends Service {
             IntentFilter intentFilter = new IntentFilter();
             intentFilter.addAction(Config.INTENT_ACTION_NOTIFICATION_BUTTON_CLICK);
             intentFilter.addAction(Config.INTENT_ACTION_NOTIFICATION_UPDATE_COUNT);
-            registerReceiver(notificationButtonBroadcastReceiver, intentFilter);
+            if (Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(notificationButtonBroadcastReceiver, intentFilter, RECEIVER_NOT_EXPORTED);
+            } else {
+                registerReceiver(notificationButtonBroadcastReceiver, intentFilter);
+            }
         }
         if (builder_manage == null) {
             builder_manage = createNotification();
@@ -99,7 +103,7 @@ public class NotificationService extends Service {
         //Content Intent
         Intent intent_main = new Intent(this, MainActivity.class);
         intent_main.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        PendingIntent pendingIntent_main = PendingIntent.getActivity(this, 0, intent_main, PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent pendingIntent_main = PendingIntent.getActivity(this, 0, intent_main, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         builder.setContentIntent(pendingIntent_main);
 
         //Content View
@@ -110,7 +114,7 @@ public class NotificationService extends Service {
         remoteViews.setImageViewResource(R.id.imageview_set_picture_view, R.drawable.ic_invisible);
         Intent intent_picture_show = new Intent();
         intent_picture_show.setAction(Config.INTENT_ACTION_NOTIFICATION_BUTTON_CLICK);
-        PendingIntent pendingIntent_picture_show = PendingIntent.getBroadcast(this, 1, intent_picture_show, PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent pendingIntent_picture_show = PendingIntent.getBroadcast(this, 1, intent_picture_show, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         remoteViews.setOnClickPendingIntent(R.id.imageview_set_picture_view, pendingIntent_picture_show);
 
         builder.setContent(remoteViews);

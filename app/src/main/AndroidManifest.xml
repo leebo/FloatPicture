@@ -1,6 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="tool.xfy9326.floatpicture">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -67,8 +66,11 @@
         </activity>
 
         <service
-            android:name=".Services.NotificationService"
-            tools:ignore="InnerclassSeparator" />
+            android:name=".NotificationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection">
+        </service>
 
         <receiver
             android:name=".Receiver.BootCompleteReceiver"

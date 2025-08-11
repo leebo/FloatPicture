@@ -31,8 +31,8 @@ public class Config {
     public final static String DATA_ALLOW_PICTURE_OVER_LAYOUT = "ALLOW_PICTURE_OVER_LAYOUT";
 
     public final static boolean DATA_DEFAULT_PICTURE_SHOW_ENABLED = true;
-    public final static int DATA_DEFAULT_PICTURE_POSITION_X = 100;
-    public final static int DATA_DEFAULT_PICTURE_POSITION_Y = 100;
+    public final static int DATA_DEFAULT_PICTURE_POSITION_X = 0;
+    public final static int DATA_DEFAULT_PICTURE_POSITION_Y = 0;
     public final static float DATA_DEFAULT_PICTURE_ALPHA = 0.5f;
     public final static float DATA_DEFAULT_PICTURE_DEGREE = 0f;
     public final static boolean DATA_DEFAULT_PICTURE_TOUCH_AND_MOVE = false;
@@ -50,6 +50,9 @@ public class Config {
     public final static String PREFERENCE_SHOW_NOTIFICATION_CONTROL = "show_notification_control";
     public final static String PREFERENCE_NEW_PICTURE_QUALITY = "new_picture_quality";
     public final static String PREFERENCE_TOUCHABLE_POSITION_EDIT = "touchable_position_edit";
+
+    public final static String PREFERENCE_GLOBAL_VISIBILITY_STATE = "global_visibility_state";
+    public final static boolean DATA_DEFAULT_GLOBAL_VISIBILITY = true;
 
     public final static String LICENSE_PATH_APPLICATION = "LICENSE";
     private final static String DEFAULT_ROOT_DIR = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator;

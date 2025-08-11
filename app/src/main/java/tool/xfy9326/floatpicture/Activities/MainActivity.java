@@ -33,6 +33,9 @@ import tool.xfy9326.floatpicture.Utils.Config;
 import tool.xfy9326.floatpicture.View.AdvancedRecyclerView;
 import tool.xfy9326.floatpicture.View.ManageListAdapter;
 
+import android.content.SharedPreferences;
+import androidx.preference.PreferenceManager;
+
 public class MainActivity extends AppCompatActivity {
     private ManageListAdapter manageListAdapter;
     private long BackClickTime;
@@ -65,6 +68,13 @@ public class MainActivity extends AppCompatActivity {
             mainApplication.setAppInit(true);
             IOMethods.setNoMedia();
         }
+        ManageMethods.createToggleButton(this);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        ManageMethods.removeToggleButton(this);
     }
 
     private void ViewSet() {

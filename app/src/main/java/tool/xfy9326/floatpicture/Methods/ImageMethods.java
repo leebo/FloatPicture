@@ -48,7 +48,7 @@ public class ImageMethods {
         try {
             String id = getNewPictureId(mContext, uri);
             Bitmap bitmap = getNewBitmap(mContext, uri);
-            IOMethods.saveBitmap(bitmap, PreferenceManager.getDefaultSharedPreferences(mContext).getInt(Config.PREFERENCE_NEW_PICTURE_QUALITY, 80), Config.DEFAULT_PICTURE_DIR + id);
+            IOMethods.saveBitmap(bitmap, PreferenceManager.getDefaultSharedPreferences(mContext).getInt(Config.PREFERENCE_NEW_PICTURE_QUALITY, 100), Config.DEFAULT_PICTURE_DIR + id);
             return id;
         } catch (Exception e) {
             e.printStackTrace();

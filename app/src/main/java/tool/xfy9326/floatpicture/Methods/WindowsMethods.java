@@ -43,8 +43,8 @@ public class WindowsMethods {
         layoutParams.x = layoutPositionX;
         layoutParams.y = layoutPositionY;
         layoutParams.gravity = Gravity.START | Gravity.TOP;
-        layoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
-        layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT;
+        layoutParams.height = WindowManager.LayoutParams.MATCH_PARENT;
         layoutParams.format = PixelFormat.TRANSLUCENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             layoutParams.alpha = ((MainApplication) context.getApplicationContext()).getSafeWindowsAlpha();
