@@ -81,4 +81,7 @@
     <string name="settings_allow_picture_over_layout_sum">Show picture out of current window</string>
     <string name="toggle_visibility">Toggle Floating Pictures Visibility</string>
     <string name="toggle_visibility_off">Floating Pictures are Hidden</string>
+    <string name="screen_resolution_format">Resolution: %1$d x %2$d</string>
+    <string name="screen_ratio_format">Ratio: %1$s</string>
+    <string name="screen_size_format">Size: %1$s inches</string>
 </resources>

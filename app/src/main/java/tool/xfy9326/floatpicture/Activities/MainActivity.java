@@ -8,6 +8,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.Toast;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
@@ -35,6 +36,9 @@ import tool.xfy9326.floatpicture.View.ManageListAdapter;
 
 import android.content.SharedPreferences;
 import androidx.preference.PreferenceManager;
+import android.util.DisplayMetrics;
+import android.content.Context;
+import android.view.WindowManager;
 
 public class MainActivity extends AppCompatActivity {
     private ManageListAdapter manageListAdapter;
@@ -61,6 +65,37 @@ public class MainActivity extends AppCompatActivity {
             PermissionMethods.askOverlayPermission(this, Config.REQUEST_CODE_PERMISSION_OVERLAY);
         }
         PermissionMethods.askPermission(this, PermissionMethods.StoragePermission, Config.REQUEST_CODE_PERMISSION_STORAGE);
+
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean isFirstLaunch = sharedPreferences.getBoolean(Config.PREFERENCE_FIRST_LAUNCH, true);
+
+        if (isFirstLaunch) {
+            DisplayMetrics displayMetrics = new DisplayMetrics();
+            WindowManager windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+            windowManager.getDefaultDisplay().getMetrics(displayMetrics);
+
+            int screenWidth = displayMetrics.widthPixels;
+            int screenHeight = displayMetrics.heightPixels;
+            int densityDpi = displayMetrics.densityDpi;
+            float screenRatio = (float) screenWidth / screenHeight;
+
+            // Calculate screen size in inches (diagonal)
+            float xdpi = displayMetrics.xdpi;
+            float ydpi = displayMetrics.ydpi;
+            float widthInches = screenWidth / xdpi;
+            float heightInches = screenHeight / ydpi;
+            double screenSizeInches = Math.sqrt(Math.pow(widthInches, 2) + Math.pow(heightInches, 2));
+
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putInt(Config.PREFERENCE_SCREEN_WIDTH, screenWidth);
+            editor.putInt(Config.PREFERENCE_SCREEN_HEIGHT, screenHeight);
+            editor.putInt(Config.PREFERENCE_SCREEN_DENSITY_DPI, densityDpi);
+            editor.putFloat(Config.PREFERENCE_SCREEN_RATIO, screenRatio);
+            editor.putFloat(Config.PREFERENCE_SCREEN_SIZE_INCHES, (float) screenSizeInches);
+            editor.putBoolean(Config.PREFERENCE_FIRST_LAUNCH, false);
+            editor.apply();
+        }
+
         ViewSet();
         MainApplication mainApplication = (MainApplication) getApplicationContext();
         if (mainApplication.isAppInit() || savedInstanceState == null) {
@@ -90,6 +125,21 @@ public class MainActivity extends AppCompatActivity {
 
         FloatingActionButton floatingActionButton = findViewById(R.id.main_button_add);
         floatingActionButton.setOnClickListener(view -> ManageMethods.SelectPicture(MainActivity.this));
+
+        // Display screen information
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        TextView screenResolutionTextView = findViewById(R.id.text_screen_resolution);
+        TextView screenRatioTextView = findViewById(R.id.text_screen_ratio);
+        TextView screenSizeTextView = findViewById(R.id.text_screen_size);
+
+        int screenWidth = sharedPreferences.getInt(Config.PREFERENCE_SCREEN_WIDTH, 0);
+        int screenHeight = sharedPreferences.getInt(Config.PREFERENCE_SCREEN_HEIGHT, 0);
+        float screenRatio = sharedPreferences.getFloat(Config.PREFERENCE_SCREEN_RATIO, 0.0f);
+        float screenSizeInches = sharedPreferences.getFloat(Config.PREFERENCE_SCREEN_SIZE_INCHES, 0.0f);
+
+        screenResolutionTextView.setText(getString(R.string.screen_resolution_format, screenWidth, screenHeight));
+        screenRatioTextView.setText(getString(R.string.screen_ratio_format, String.format("%.2f", screenRatio)));
+        screenSizeTextView.setText(getString(R.string.screen_size_format, String.format("%.2f", screenSizeInches)));
 
         final DrawerLayout drawerLayout = findViewById(R.id.main_drawer_layout);
         ActionBarDrawerToggle actionBarDrawerToggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.open, R.string.close);

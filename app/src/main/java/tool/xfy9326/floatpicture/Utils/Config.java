@@ -54,6 +54,13 @@ public class Config {
     public final static String PREFERENCE_GLOBAL_VISIBILITY_STATE = "global_visibility_state";
     public final static boolean DATA_DEFAULT_GLOBAL_VISIBILITY = true;
 
+    public final static String PREFERENCE_SCREEN_WIDTH = "screen_width";
+    public final static String PREFERENCE_SCREEN_HEIGHT = "screen_height";
+    public final static String PREFERENCE_SCREEN_DENSITY_DPI = "screen_density_dpi";
+    public final static String PREFERENCE_SCREEN_RATIO = "screen_ratio";
+    public final static String PREFERENCE_SCREEN_SIZE_INCHES = "screen_size_inches";
+    public final static String PREFERENCE_FIRST_LAUNCH = "first_launch";
+
     public final static String LICENSE_PATH_APPLICATION = "LICENSE";
     private final static String DEFAULT_ROOT_DIR = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator;
     private final static String DEFAULT_APPLICATION_DIR = DEFAULT_ROOT_DIR + "FloatPicture" + File.separator;

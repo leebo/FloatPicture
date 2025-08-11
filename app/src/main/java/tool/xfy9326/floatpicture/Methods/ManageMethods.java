@@ -121,14 +121,35 @@ public class ManageMethods {
                 showWindowById(context, id);
                 pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, true);
                 pictureData.commit(null);
+
+                // Update global visibility state (Requirement 1)
+                PreferenceManager.getDefaultSharedPreferences(context).edit()
+                        .putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, true).apply();
             }
-        } else {
+        } else { // If 'visible' is false, meaning we are trying to hide a window
             if (data_visible) {
                 hideWindowById(context, id);
                 pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, false);
                 pictureData.commit(null);
+
+                // Check if all windows are now hidden to update global visibility state (Requirement 1)
+                boolean anyWindowStillVisible = false;
+                LinkedHashMap<String, String> allPictures = pictureData.getListArray();
+                for (Map.Entry<String, String> entry : allPictures.entrySet()) {
+                    PictureData checkPictureData = new PictureData();
+                    checkPictureData.setDataControl(entry.getKey());
+                    if (checkPictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, false)) {
+                        anyWindowStillVisible = true;
+                        break;
+                    }
+                }
+                if (!anyWindowStillVisible) {
+                    PreferenceManager.getDefaultSharedPreferences(context).edit()
+                            .putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, false).apply();
+                }
             }
         }
+        updateToggleButtonIcon(context); // Always update toggle button icon after any visibility change
     }
 
     private static void hideWindowById(Context mContext, String id) {
