@@ -74,15 +74,11 @@ public class ManageListAdapter extends AdvancedRecyclerView.Adapter<ManageListVi
         holder.button_Picture_Edit.setOnClickListener(view -> {
             PictureData pictureData1 = new PictureData();
             pictureData1.setDataControl(mPictureId);
-            if (pictureData1.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, Config.DATA_DEFAULT_PICTURE_SHOW_ENABLED)) {
-                Intent intent = new Intent(mActivity, PictureSettingsActivity.class);
-                intent.putExtra(Config.INTENT_PICTURE_EDIT_MODE, true);
-                intent.putExtra(Config.INTENT_PICTURE_EDIT_ID, mPictureId);
-                intent.putExtra(Config.INTENT_PICTURE_EDIT_POSITION, holder.getAdapterPosition());
-                mActivity.startActivityForResult(intent, Config.REQUEST_CODE_ACTIVITY_PICTURE_SETTINGS_CHANGE);
-            } else {
-                MainActivity.SnackShow(mActivity, R.string.action_warn_edit_hided_window);
-            }
+            Intent intent = new Intent(mActivity, PictureSettingsActivity.class);
+            intent.putExtra(Config.INTENT_PICTURE_EDIT_MODE, true);
+            intent.putExtra(Config.INTENT_PICTURE_EDIT_ID, mPictureId);
+            intent.putExtra(Config.INTENT_PICTURE_EDIT_POSITION, holder.getAdapterPosition());
+            mActivity.startActivityForResult(intent, Config.REQUEST_CODE_ACTIVITY_PICTURE_SETTINGS_CHANGE);
         });
 
         holder.button_Picture_Delete.setOnClickListener(v -> {
