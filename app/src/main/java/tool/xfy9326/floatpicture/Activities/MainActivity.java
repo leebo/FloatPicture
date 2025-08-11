@@ -61,41 +61,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void init(Bundle savedInstanceState) {
         BackClickTime = System.currentTimeMillis();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            PermissionMethods.askOverlayPermission(this, Config.REQUEST_CODE_PERMISSION_OVERLAY);
-        }
-        PermissionMethods.askPermission(this, PermissionMethods.StoragePermission, Config.REQUEST_CODE_PERMISSION_STORAGE);
-
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean isFirstLaunch = sharedPreferences.getBoolean(Config.PREFERENCE_FIRST_LAUNCH, true);
-
-        if (isFirstLaunch) {
-            DisplayMetrics displayMetrics = new DisplayMetrics();
-            WindowManager windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-            windowManager.getDefaultDisplay().getMetrics(displayMetrics);
-
-            int screenWidth = displayMetrics.widthPixels;
-            int screenHeight = displayMetrics.heightPixels;
-            int densityDpi = displayMetrics.densityDpi;
-            float screenRatio = (float) screenWidth / screenHeight;
-
-            // Calculate screen size in inches (diagonal)
-            float xdpi = displayMetrics.xdpi;
-            float ydpi = displayMetrics.ydpi;
-            float widthInches = screenWidth / xdpi;
-            float heightInches = screenHeight / ydpi;
-            double screenSizeInches = Math.sqrt(Math.pow(widthInches, 2) + Math.pow(heightInches, 2));
-
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putInt(Config.PREFERENCE_SCREEN_WIDTH, screenWidth);
-            editor.putInt(Config.PREFERENCE_SCREEN_HEIGHT, screenHeight);
-            editor.putInt(Config.PREFERENCE_SCREEN_DENSITY_DPI, densityDpi);
-            editor.putFloat(Config.PREFERENCE_SCREEN_RATIO, screenRatio);
-            editor.putFloat(Config.PREFERENCE_SCREEN_SIZE_INCHES, (float) screenSizeInches);
-            editor.putBoolean(Config.PREFERENCE_FIRST_LAUNCH, false);
-            editor.apply();
-        }
-
         ViewSet();
         MainApplication mainApplication = (MainApplication) getApplicationContext();
         if (mainApplication.isAppInit() || savedInstanceState == null) {
@@ -193,34 +158,8 @@ public class MainActivity extends AppCompatActivity {
                 intent.setData(data.getData());
                 ActivityCompat.startActivityForResult(this, intent, Config.REQUEST_CODE_ACTIVITY_PICTURE_SETTINGS_ADD, null);
             }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && requestCode == Config.REQUEST_CODE_PERMISSION_OVERLAY) {
-            PermissionMethods.delayOverlayPermissionCheck(this);
         }
         super.onActivityResult(requestCode, resultCode, data);
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (requestCode == Config.REQUEST_CODE_PERMISSION_STORAGE) {
-            boolean run = true;
-            for (int i = 0; i < grantResults.length; i++) {
-                if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
-                    if (ActivityCompat.shouldShowRequestPermissionRationale(this, permissions[i])) {
-                        PermissionMethods.explainPermission(this, PermissionMethods.StoragePermission, Config.REQUEST_CODE_PERMISSION_STORAGE);
-                    } else {
-                        Toast.makeText(this, R.string.permission_warn_storage_intent, Toast.LENGTH_SHORT).show();
-                    }
-                    run = false;
-                    break;
-                }
-            }
-            if (run && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (Settings.canDrawOverlays(this)) {
-                    ManageMethods.RunWin(this);
-                }
-            }
-        }
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
     @SuppressLint("MissingSuperCall")

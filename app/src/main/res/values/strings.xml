@@ -84,4 +84,13 @@
     <string name="screen_resolution_format">Resolution: %1$d x %2$d</string>
     <string name="screen_ratio_format">Ratio: %1$s</string>
     <string name="screen_size_format">Size: %1$s inches</string>
+    <string name="permission_status_checking">Checking permissions...</string>
+    <string name="permission_status_all_granted">All permissions granted. Ready to enter app.</string>
+    <string name="permission_status_missing">Some permissions are missing. Please grant them.</string>
+    <string name="grant_overlay_permission">Grant Draw Over Other Apps Permission</string>
+    <string name="grant_storage_permission">Grant Storage Permission</string>
+    <string name="enter_app">Enter App</string>
+    <string name="permission_overlay_already_granted">Draw over other apps permission already granted.</string>
+    <string name="permission_storage_already_granted">Storage permission already granted.</string>
+    <string name="permission_grant_all_required">Please grant all required permissions to enter the app.</string>
 </resources>

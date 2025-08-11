@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -20,15 +21,22 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name=".Activities.MainActivity"
+            android:name=".Activities.PermissionRequestActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:theme="@style/DrawerActivity"
+            android:theme="@style/AppTheme"
             tools:ignore="InnerclassSeparator">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".Activities.MainActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/DrawerActivity"
+            tools:ignore="InnerclassSeparator">
         </activity>
 
         <activity
