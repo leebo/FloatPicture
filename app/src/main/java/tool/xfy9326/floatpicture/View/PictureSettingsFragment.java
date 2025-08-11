@@ -137,7 +137,7 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
                     allow_picture_over_layout = Config.DATA_DEFAULT_ALLOW_PICTURE_OVER_LAYOUT;
                     bitmap = ImageMethods.getShowBitmap(requireContext(), PictureId);
                     default_zoom = ImageMethods.getDefaultZoom(requireContext(), bitmap, false);
-                    zoom = default_zoom;
+                    zoom = 1.0f;
                     floatImageView = ImageMethods.createPictureView(requireContext(), bitmap, touch_and_move, allow_picture_over_layout, zoom, picture_degree);
                     floatImageView.setAlpha(picture_alpha);
                     floatImageView.setPictureId(PictureId);
@@ -153,14 +153,6 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
     }
 
     private void PreferenceSet() {
-        requirePreference(Config.PREFERENCE_PICTURE_NAME).setOnPreferenceClickListener(preference -> {
-            setPictureName();
-            return true;
-        });
-        requirePreference(Config.PREFERENCE_PICTURE_RESIZE).setOnPreferenceClickListener(preference -> {
-            // setPictureSize();
-            return true;
-        });
         requirePreference(Config.PREFERENCE_PICTURE_DEGREE).setOnPreferenceClickListener(preference -> {
             setPictureDegree();
             return true;
@@ -221,30 +213,6 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
         builder.show();
     }
 
-    private void setPictureName() {
-        View mView = inflater.inflate(R.layout.dialog_edit_text, requireActivity().findViewById(R.id.layout_dialog_edit_text));
-        AlertDialog.Builder dialog = new AlertDialog.Builder(requireContext());
-        dialog.setTitle(R.string.settings_picture_name);
-        final EditText editText = mView.findViewById(R.id.edittext_dialog);
-        editText.setText(PictureName);
-        dialog.setPositiveButton(R.string.done, (dialog12, which) -> {
-            if (editText.getText().toString().isEmpty()) {
-                Toast.makeText(getActivity(), R.string.settings_picture_name_warn, Toast.LENGTH_SHORT).show();
-            } else {
-                PictureName = editText.getText().toString();
-            }
-        });
-        dialog.setNegativeButton(R.string.cancel, (dialog1, which) -> {
-            if (editText.getText().toString().isEmpty()) {
-                Toast.makeText(getActivity(), R.string.settings_picture_name_warn, Toast.LENGTH_SHORT).show();
-            }
-        });
-        dialog.setView(mView);
-        dialog.show();
-    }
-
-    
-
     private void setPictureDegree() {
         bitmap_Edit = ImageMethods.getEditBitmap(getActivity(), bitmap);
         floatImageView_Edit = ImageMethods.createPictureView(getActivity(), bitmap_Edit, touch_and_move, allow_picture_over_layout, zoom, picture_degree);
@@ -297,6 +265,51 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
     }
 
     
+
+    private void setPictureAlpha() {
+        bitmap_Edit = ImageMethods.getEditBitmap(getActivity(), bitmap);
+        floatImageView_Edit = ImageMethods.createPictureView(getActivity(), bitmap_Edit, touch_and_move, allow_picture_over_layout, zoom, picture_degree);
+        onEditPicture(floatImageView_Edit);
+
+        View mView = inflater.inflate(R.layout.dialog_set_alpha, requireActivity().findViewById(R.id.layout_dialog_set_alpha));
+        AlertDialog.Builder dialog = new AlertDialog.Builder(requireContext());
+        dialog.setTitle(R.string.settings_picture_alpha);
+        dialog.setCancelable(false);
+
+        TextView tvAlphaValue = mView.findViewById(R.id.textview_alpha_value);
+        SeekBar seekBarAlpha = mView.findViewById(R.id.seekbar_alpha);
+
+        // Convert alpha (0.0-1.0) to percentage (0-100)
+        int currentAlphaPercentage = (int) (picture_alpha * 100);
+        tvAlphaValue.setText(getString(R.string.transparency_format, currentAlphaPercentage));
+        seekBarAlpha.setProgress(currentAlphaPercentage);
+        picture_alpha_temp = picture_alpha; // Initialize temp with current value
+
+        seekBarAlpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                picture_alpha_temp = (float) progress / 100.0f;
+                tvAlphaValue.setText(getString(R.string.transparency_format, progress));
+                floatImageView_Edit.setAlpha(picture_alpha_temp);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+
+        dialog.setPositiveButton(R.string.done, (__, which) -> {
+            picture_alpha = picture_alpha_temp;
+            onSuccessEditPicture(floatImageView_Edit, bitmap_Edit);
+        });
+        dialog.setNegativeButton(R.string.cancel, (__, which) -> onFailedEditPicture(floatImageView_Edit, bitmap_Edit));
+        dialog.setView(mView);
+        dialog.show();
+    }
 
     private void setPicturePosition() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext());

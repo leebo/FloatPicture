@@ -4,25 +4,7 @@
 
     <PreferenceCategory
         app:iconSpaceReserved="false"
-        app:title="@string/settings_general">
-        <Preference
-            android:selectAllOnFocus="true"
-            app:iconSpaceReserved="false"
-            app:key="settings_picture_name"
-            app:singleLine="true"
-            app:summary="@string/settings_picture_name_sum"
-            app:title="@string/settings_picture_name" />
-    </PreferenceCategory>
-    <PreferenceCategory
-        app:iconSpaceReserved="false"
         app:title="@string/settings_picture_control">
-        <Preference
-            android:selectAllOnFocus="true"
-            app:iconSpaceReserved="false"
-            app:key="settings_picture_resize"
-            app:singleLine="true"
-            app:summary="@string/settings_picture_resize_sum"
-            app:title="@string/settings_picture_resize" />
         <Preference
             android:selectAllOnFocus="true"
             app:iconSpaceReserved="false"

@@ -64,7 +64,7 @@ public class PermissionRequestActivity extends AppCompatActivity {
             tvPermissionStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_green_dark));
             btnGrantOverlay.setVisibility(View.GONE);
             btnGrantStorage.setVisibility(View.GONE);
-            btnEnterApp.setVisibility(View.VISIBLE);
+            checkAndEnterApp();
         } else {
             tvPermissionStatus.setText(R.string.permission_status_missing);
             tvPermissionStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark));

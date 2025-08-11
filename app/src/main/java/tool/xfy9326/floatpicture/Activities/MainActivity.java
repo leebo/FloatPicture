@@ -19,6 +19,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.DefaultItemAnimator;
+import androidx.recyclerview.widget.GridLayoutManager;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
@@ -87,24 +88,10 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(manageListAdapter);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         recyclerView.setEmptyView(findViewById(R.id.layout_widget_empty_view));
+        recyclerView.setLayoutManager(new GridLayoutManager(this, 2));
 
         FloatingActionButton floatingActionButton = findViewById(R.id.main_button_add);
         floatingActionButton.setOnClickListener(view -> ManageMethods.SelectPicture(MainActivity.this));
-
-        // Display screen information
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        TextView screenResolutionTextView = findViewById(R.id.text_screen_resolution);
-        TextView screenRatioTextView = findViewById(R.id.text_screen_ratio);
-        TextView screenSizeTextView = findViewById(R.id.text_screen_size);
-
-        int screenWidth = sharedPreferences.getInt(Config.PREFERENCE_SCREEN_WIDTH, 0);
-        int screenHeight = sharedPreferences.getInt(Config.PREFERENCE_SCREEN_HEIGHT, 0);
-        float screenRatio = sharedPreferences.getFloat(Config.PREFERENCE_SCREEN_RATIO, 0.0f);
-        float screenSizeInches = sharedPreferences.getFloat(Config.PREFERENCE_SCREEN_SIZE_INCHES, 0.0f);
-
-        screenResolutionTextView.setText(getString(R.string.screen_resolution_format, screenWidth, screenHeight));
-        screenRatioTextView.setText(getString(R.string.screen_ratio_format, String.format("%.2f", screenRatio)));
-        screenSizeTextView.setText(getString(R.string.screen_size_format, String.format("%.2f", screenSizeInches)));
 
         final DrawerLayout drawerLayout = findViewById(R.id.main_drawer_layout);
         ActionBarDrawerToggle actionBarDrawerToggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.open, R.string.close);

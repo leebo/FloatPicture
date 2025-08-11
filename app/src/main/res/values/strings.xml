@@ -93,4 +93,6 @@
     <string name="permission_overlay_already_granted">Draw over other apps permission already granted.</string>
     <string name="permission_storage_already_granted">Storage permission already granted.</string>
     <string name="permission_grant_all_required">Please grant all required permissions to enter the app.</string>
+    <string name="transparency_format">Transparency: %1$d%%</string>
+    <string name="zoom_format">Zoom: %1$d%%</string>
 </resources>
