@@ -8,6 +8,11 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.view.View;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
+import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.preference.PreferenceManager;
@@ -111,6 +116,24 @@ public class ApplicationMethods {
                 }
             }
         }).start();
+    }
+
+    public static String getForegroundAppPackageName(Context context) {
+        String foregroundApp = null;
+        UsageStatsManager usageStatsManager = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
+        long currentTime = System.currentTimeMillis();
+        // Query usage stats for the last 10 seconds
+        List<UsageStats> usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, currentTime - 10 * 1000, currentTime);
+        if (usageStatsList != null && !usageStatsList.isEmpty()) {
+            SortedMap<Long, UsageStats> mySortedMap = new TreeMap<>();
+            for (UsageStats usageStats : usageStatsList) {
+                mySortedMap.put(usageStats.getLastTimeUsed(), usageStats);
+            }
+            if (!mySortedMap.isEmpty()) {
+                foregroundApp = mySortedMap.get(mySortedMap.lastKey()).getPackageName();
+            }
+        }
+        return foregroundApp;
     }
 }
 

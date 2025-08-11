@@ -11,21 +11,29 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.widget.RemoteViews;
+import android.view.View; // Added for HashMap<String, View>
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import java.util.HashMap; // Added
+import java.util.LinkedHashMap; // Added (from original file)
+import java.util.Map; // Added
 import java.util.Objects;
 
 import tool.xfy9326.floatpicture.Activities.MainActivity;
 import tool.xfy9326.floatpicture.MainApplication;
+import tool.xfy9326.floatpicture.Methods.ApplicationMethods; // Added
 import tool.xfy9326.floatpicture.Methods.ManageMethods;
 import tool.xfy9326.floatpicture.R;
 import tool.xfy9326.floatpicture.Utils.Config;
+import tool.xfy9326.floatpicture.View.FloatImageView; // Added
 import tool.xfy9326.floatpicture.View.ManageListAdapter;
 
 public class NotificationService extends Service {
@@ -33,6 +41,23 @@ public class NotificationService extends Service {
     private RemoteViews remoteViews;
     private NotificationCompat.Builder builder_manage;
     private NotificationButtonBroadcastReceiver notificationButtonBroadcastReceiver;
+
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private Runnable updatePackageNameRunnable = new Runnable() {
+        @Override
+        public void run() {
+            String foregroundPackageName = ApplicationMethods.getForegroundAppPackageName(NotificationService.this);
+            if (foregroundPackageName != null) {
+                HashMap<String, View> registeredViews = ((MainApplication) getApplicationContext()).getRegister();
+                for (Map.Entry<String, View> entry : registeredViews.entrySet()) {
+                    if (entry.getValue() instanceof FloatImageView) {
+                        ((FloatImageView) entry.getValue()).updatePackageName(foregroundPackageName);
+                    }
+                }
+            }
+            handler.postDelayed(this, 1000); // Update every 1 second
+        }
+    };
 
     private static void createNotificationChannel(@NonNull Context context, @NonNull NotificationManagerCompat notificationManager) {
         if (Build.VERSION.SDK_INT >= 26) {
@@ -68,6 +93,7 @@ public class NotificationService extends Service {
             builder_manage = createNotification();
             startForeground(Config.NOTIFICATION_ID, builder_manage.build());
         }
+        handler.post(updatePackageNameRunnable); // Start updating package names
     }
 
     @Nullable
@@ -79,6 +105,7 @@ public class NotificationService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        handler.removeCallbacks(updatePackageNameRunnable); // Stop updating package names
         if (notificationButtonBroadcastReceiver != null) {
             unregisterReceiver(notificationButtonBroadcastReceiver);
             notificationButtonBroadcastReceiver = null;
@@ -150,5 +177,4 @@ public class NotificationService extends Service {
             }
         }
     }
-
 }

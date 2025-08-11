@@ -62,6 +62,7 @@ public class ManageMethods {
         boolean over_layout = pictureData.getBoolean(Config.DATA_ALLOW_PICTURE_OVER_LAYOUT, Config.DATA_DEFAULT_ALLOW_PICTURE_OVER_LAYOUT);
         FloatImageView floatImageView = ImageMethods.createPictureView(mContext, bitmap, touch_and_move, over_layout, zoom, picture_degree);
         floatImageView.setAlpha(picture_alpha);
+        floatImageView.updatePackageName(ApplicationMethods.getForegroundAppPackageName(mContext));
         ImageMethods.saveFloatImageViewById(mContext, id, floatImageView);
         if (pictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, Config.DATA_DEFAULT_PICTURE_SHOW_ENABLED)) {
             WindowsMethods.createWindow(windowManager, floatImageView, touch_and_move, over_layout, position_x, position_y);
