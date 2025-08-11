@@ -13,6 +13,8 @@ import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.RadioGroup;
+import android.widget.RadioButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -156,7 +158,7 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
             return true;
         });
         requirePreference(Config.PREFERENCE_PICTURE_RESIZE).setOnPreferenceClickListener(preference -> {
-            setPictureSize();
+            // setPictureSize();
             return true;
         });
         requirePreference(Config.PREFERENCE_PICTURE_DEGREE).setOnPreferenceClickListener(preference -> {
@@ -164,7 +166,7 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
             return true;
         });
         requirePreference(Config.PREFERENCE_PICTURE_ALPHA).setOnPreferenceClickListener(preference -> {
-            setPictureAlpha();
+            // setPictureAlpha();
             return true;
         });
         CheckBoxPreference preference_touch_and_move = findPreference(Config.PREFERENCE_PICTURE_TOUCH_AND_MOVE);
@@ -241,72 +243,7 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
         dialog.show();
     }
 
-    private void setPictureSize() {
-        bitmap_Edit = ImageMethods.getEditBitmap(getActivity(), bitmap);
-        floatImageView_Edit = ImageMethods.createPictureView(getActivity(), bitmap_Edit, touch_and_move, allow_picture_over_layout, zoom, picture_degree);
-        onEditPicture(floatImageView_Edit);
-
-        View mView = inflater.inflate(R.layout.dialog_set_size, requireActivity().findViewById(R.id.layout_dialog_set_size));
-        AlertDialog.Builder dialog = new AlertDialog.Builder(requireContext());
-        dialog.setTitle(R.string.settings_picture_resize);
-        dialog.setCancelable(false);
-        final float Max_Size = ImageMethods.getDefaultZoom(requireContext(), bitmap, true) * 100;
-        TextView name = mView.findViewById(R.id.textview_set_size);
-        name.setText(R.string.settings_picture_resize_size);
-        final SeekBar seekBar = mView.findViewById(R.id.seekbar_set_size);
-        seekBar.setMax((int) Max_Size);
-        seekBar.setProgress((int) (zoom * 100));
-        final EditText editText = mView.findViewById(R.id.edittext_set_size);
-        editText.setText(String.valueOf(zoom));
-        zoom_temp = zoom;
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (progress > 0) {
-                    zoom_temp = ((float) progress) / 100;
-                    editText.setText(String.valueOf(zoom_temp));
-                    WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, touch_and_move, allow_picture_over_layout, zoom_temp, picture_degree, position_x, position_y);
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
-        editText.setOnEditorActionListener((v, actionId, event) -> {
-            float edittext_temp = Float.parseFloat(v.getText().toString());
-            if (edittext_temp > 0 && (allow_picture_over_layout || edittext_temp <= Max_Size)) {
-                zoom_temp = edittext_temp;
-                if (!allow_picture_over_layout) {
-                    seekBar.setProgress((int) (zoom_temp * 100));
-                }
-                WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, touch_and_move, allow_picture_over_layout, zoom_temp, picture_degree, position_x, position_y);
-            } else {
-                Toast.makeText(getActivity(), R.string.settings_picture_resize_warn, Toast.LENGTH_SHORT).show();
-            }
-            return false;
-        });
-        dialog.setPositiveButton(R.string.done, (__, which) -> {
-            if (allow_picture_over_layout) {
-                try {
-                    zoom = Float.parseFloat(editText.getText().toString());
-                } catch (NumberFormatException e) {
-                    e.printStackTrace();
-                    zoom = zoom_temp;
-                }
-            } else {
-                zoom = zoom_temp;
-            }
-            onSuccessEditPicture(floatImageView_Edit, bitmap_Edit);
-        });
-        dialog.setNegativeButton(R.string.cancel, (__, which) -> onFailedEditPicture(floatImageView_Edit, bitmap_Edit));
-        dialog.setView(mView);
-        dialog.show();
-    }
+    
 
     private void setPictureDegree() {
         bitmap_Edit = ImageMethods.getEditBitmap(getActivity(), bitmap);
@@ -319,39 +256,37 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
         dialog.setCancelable(false);
         TextView name = mView.findViewById(R.id.textview_set_size);
         name.setText(R.string.degree);
-        final SeekBar seekBar = mView.findViewById(R.id.seekbar_set_size);
-        seekBar.setMax(3600);
-        seekBar.setProgress((int) (picture_degree * 10));
-        final EditText editText = mView.findViewById(R.id.edittext_set_size);
-        editText.setText(String.valueOf(((float) Math.round(picture_degree * 10)) / 10));
-        picture_degree_temp = picture_degree;
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                picture_degree_temp = ((float) progress) / 10;
-                editText.setText(String.valueOf(((float) Math.round(picture_degree_temp * 10)) / 10));
-                WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, touch_and_move, allow_picture_over_layout, zoom, picture_degree_temp, position_x, position_y);
-            }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
+        // New RadioGroup and RadioButton handling
+        RadioGroup radioGroup = mView.findViewById(R.id.radio_group_degree);
+        if (picture_degree == 0) {
+            radioGroup.check(R.id.radio_0_degree);
+        } else if (picture_degree == 90) {
+            radioGroup.check(R.id.radio_90_degree);
+        } else if (picture_degree == 180) {
+            radioGroup.check(R.id.radio_180_degree);
+        } else if (picture_degree == 270) {
+            radioGroup.check(R.id.radio_270_degree);
+        } else {
+            // Default to 0 if current degree is not one of the options
+            radioGroup.check(R.id.radio_0_degree);
+            picture_degree = 0; // Set initial degree to 0 if it's not 0, 90, 180, or 270
+        }
+        picture_degree_temp = picture_degree; // Initialize temp with current or default value
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
+        radioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.radio_0_degree) {
+                picture_degree_temp = 0;
+            } else if (checkedId == R.id.radio_90_degree) {
+                picture_degree_temp = 90;
+            } else if (checkedId == R.id.radio_180_degree) {
+                picture_degree_temp = 180;
+            } else if (checkedId == R.id.radio_270_degree) {
+                picture_degree_temp = 270;
             }
+            WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, touch_and_move, allow_picture_over_layout, zoom, picture_degree_temp, position_x, position_y);
         });
-        editText.setOnEditorActionListener((v, actionId, event) -> {
-            float edittext_temp = Float.parseFloat(v.getText().toString());
-            if (edittext_temp >= 0 && edittext_temp <= 360) {
-                picture_degree_temp = edittext_temp;
-                seekBar.setProgress((int) (picture_degree_temp * 10));
-                WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, touch_and_move, allow_picture_over_layout, zoom, picture_degree_temp, position_x, position_y);
-            } else {
-                Toast.makeText(getActivity(), R.string.settings_number_warn, Toast.LENGTH_SHORT).show();
-            }
-            return false;
-        });
+
         dialog.setPositiveButton(R.string.done, (__, which) -> {
             picture_degree = picture_degree_temp;
             onSuccessEditPicture(floatImageView_Edit, bitmap_Edit);
@@ -361,60 +296,7 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
         dialog.show();
     }
 
-    private void setPictureAlpha() {
-        View mView = inflater.inflate(R.layout.dialog_set_size, requireActivity().findViewById(R.id.layout_dialog_set_size));
-        AlertDialog.Builder dialog = new AlertDialog.Builder(requireContext());
-        dialog.setTitle(R.string.settings_picture_alpha);
-        dialog.setCancelable(false);
-        TextView name = mView.findViewById(R.id.textview_set_size);
-        name.setText(R.string.transparency);
-        final SeekBar seekBar = mView.findViewById(R.id.seekbar_set_size);
-        seekBar.setMax(100);
-        seekBar.setProgress((int) (picture_alpha * 100));
-        final EditText editText = mView.findViewById(R.id.edittext_set_size);
-        editText.setText(String.valueOf(picture_alpha));
-        picture_alpha_temp = picture_alpha;
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                picture_alpha_temp = ((float) progress) / 100;
-                editText.setText(String.valueOf(picture_alpha_temp));
-                floatImageView.setAlpha(picture_alpha_temp);
-                WindowsMethods.updateWindow(windowManager, floatImageView, touch_and_move, allow_picture_over_layout, position_x, position_y);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
-        editText.setOnEditorActionListener((v, actionId, event) -> {
-            float edittext_temp = Float.parseFloat(v.getText().toString());
-            if (edittext_temp >= 0 && edittext_temp <= 100) {
-                picture_alpha_temp = edittext_temp;
-                seekBar.setProgress((int) (picture_alpha_temp * 100));
-                floatImageView.setAlpha(picture_alpha_temp);
-                WindowsMethods.updateWindow(windowManager, floatImageView, touch_and_move, allow_picture_over_layout, position_x, position_y);
-            } else {
-                Toast.makeText(getActivity(), R.string.settings_number_warn, Toast.LENGTH_SHORT).show();
-            }
-            return false;
-        });
-        dialog.setPositiveButton(R.string.done, (__, which) -> {
-            picture_alpha = picture_alpha_temp;
-            floatImageView.setAlpha(picture_alpha);
-            WindowsMethods.updateWindow(windowManager, floatImageView, touch_and_move, allow_picture_over_layout, position_x, position_y);
-        });
-        dialog.setNegativeButton(R.string.cancel, (__, which) -> {
-            floatImageView.setAlpha(picture_alpha);
-            WindowsMethods.updateWindow(windowManager, floatImageView, touch_and_move, allow_picture_over_layout, position_x, position_y);
-        });
-        dialog.setView(mView);
-        dialog.show();
-    }
+    
 
     private void setPicturePosition() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext());

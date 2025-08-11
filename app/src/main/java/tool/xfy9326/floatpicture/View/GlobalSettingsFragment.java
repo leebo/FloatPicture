@@ -55,52 +55,10 @@ public class GlobalSettingsFragment extends PreferenceFragmentCompat {
     }
 
     private void PictureQualitySet() {
-        int picture_size = sharedPreferences.getInt(Config.PREFERENCE_NEW_PICTURE_QUALITY, 80);
-        View mView = inflater.inflate(R.layout.dialog_set_size, requireActivity().findViewById(R.id.layout_dialog_set_size));
-        AlertDialog.Builder dialog = new AlertDialog.Builder(requireActivity());
-        dialog.setTitle(R.string.settings_global_picture_quality);
-        TextView name = mView.findViewById(R.id.textview_set_size);
-        name.setText(R.string.settings_global_picture_quality_quality);
-        final SeekBar seekBar = mView.findViewById(R.id.seekbar_set_size);
-        seekBar.setProgress(picture_size);
-        seekBar.setMax(100);
-        final EditText editText = mView.findViewById(R.id.edittext_set_size);
-        editText.setText(String.valueOf(picture_size));
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                editText.setText(String.valueOf(progress));
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
-        editText.setOnEditorActionListener((v, actionId, event) -> {
-            int edittext_temp = Integer.parseInt(v.getText().toString());
-            if (edittext_temp > 0) {
-                seekBar.setProgress(edittext_temp);
-            } else {
-                Toast.makeText(getActivity(), R.string.settings_global_picture_quality_warn, Toast.LENGTH_SHORT).show();
-            }
-            return false;
-        });
-        dialog.setView(mView);
-        dialog.setPositiveButton(R.string.done, (__, which) -> {
-            int quality = seekBar.getProgress();
-            if (quality > 0) {
-                SharedPreferences.Editor editor = sharedPreferences.edit();
-                editor.putInt(Config.PREFERENCE_NEW_PICTURE_QUALITY, quality);
-                editor.apply();
-            } else {
-                Toast.makeText(getActivity(), R.string.settings_global_picture_quality_warn, Toast.LENGTH_SHORT).show();
-            }
-        });
-        dialog.setNegativeButton(R.string.cancel, null);
-        dialog.show();
+        // Directly set the quality to 100%
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt(Config.PREFERENCE_NEW_PICTURE_QUALITY, 100);
+        editor.apply();
+        Toast.makeText(getActivity(), "Default picture quality set to 100%.", Toast.LENGTH_SHORT).show();
     }
 }
