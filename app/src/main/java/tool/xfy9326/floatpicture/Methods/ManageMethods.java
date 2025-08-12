@@ -42,8 +42,13 @@ public class ManageMethods {
             LinkedHashMap<String, String> list = pictureData.getListArray();
             WindowManager windowManager = getWindowManager(mContext);
             if (!list.isEmpty()) {
+                // Only show the most recent (last) floating image instead of all images
+                String lastImageId = null;
                 for (LinkedHashMap.Entry<?, ?> entry : list.entrySet()) {
-                    StartWin(mContext, windowManager, pictureData, entry.getKey().toString());
+                    lastImageId = entry.getKey().toString();
+                }
+                if (lastImageId != null) {
+                    StartWin(mContext, windowManager, pictureData, lastImageId);
                 }
             }
         }
@@ -106,6 +111,18 @@ public class ManageMethods {
                     }
                 }
             }
+        }
+    }
+
+    public static void showSingleFloatingImage(Context mContext, String newImageId) {
+        // First close all existing floating windows
+        CloseAllWindows(mContext);
+        
+        // Then show only the new image
+        if (PermissionMethods.checkPermission(mContext, PermissionMethods.StoragePermission)) {
+            PictureData pictureData = new PictureData();
+            WindowManager windowManager = getWindowManager(mContext);
+            StartWin(mContext, windowManager, pictureData, newImageId);
         }
     }
 

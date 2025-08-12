@@ -27,7 +27,10 @@ public class ImageMethods {
 
     private static Bitmap getBitmapFromFile(File imageFile) {
         if (imageFile.exists() && imageFile.isFile() && imageFile.canRead()) {
-            return BitmapFactory.decodeFile(imageFile.getAbsolutePath());
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = 1;
+            options.inPreferredConfig = Bitmap.Config.RGB_565;
+            return BitmapFactory.decodeFile(imageFile.getAbsolutePath(), options);
         }
         return null;
     }
@@ -127,14 +130,27 @@ public class ImageMethods {
         int width = bitmap.getWidth();
         int height = bitmap.getHeight();
         Matrix matrix = new Matrix();
-        if (zoom != 0) {
+        boolean needTransform = false;
+        
+        if (zoom != 0 && zoom != 1.0f) {
             matrix.postScale(zoom, zoom);
+            needTransform = true;
         }
-        if (degree != -1) {
+        if (degree != -1 && degree != 0) {
             matrix.postRotate(degree);
+            needTransform = true;
         }
+        
+        if (!needTransform) {
+            return bitmap;
+        }
+        
         synchronized (ImageMethods.class) {
-            return createBitmap(bitmap, 0, 0, width, height, matrix, true);
+            Bitmap resized = createBitmap(bitmap, 0, 0, width, height, matrix, true);
+            if (resized != bitmap) {
+                bitmap.recycle();
+            }
+            return resized;
         }
     }
 
@@ -151,9 +167,13 @@ public class ImageMethods {
                     case ExifInterface.ORIENTATION_ROTATE_180 -> degree = 180;
                     case ExifInterface.ORIENTATION_ROTATE_270 -> degree = 270;
                 }
-                Matrix matrix = new Matrix();
-                matrix.postRotate(degree);
-                bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+                if (degree != 0) {
+                    Matrix matrix = new Matrix();
+                    matrix.postRotate(degree);
+                    Bitmap rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+                    bitmap.recycle();
+                    bitmap = rotated;
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -187,7 +207,6 @@ public class ImageMethods {
     }
 
     public static Bitmap getPreviewBitmap(Context mContext, String id) {
-        // Ensure paths are initialized
         Config.initializePaths(mContext);
         
         Bitmap temp = getPictureTempById(id);
@@ -198,16 +217,19 @@ public class ImageMethods {
             } else {
                 if (Config.DEFAULT_PICTURE_TEMP_DIR != null) {
                     IOMethods.saveBitmap(bitmap, 50, Config.DEFAULT_PICTURE_TEMP_DIR + id);
+                    temp = getPictureTempById(id);
+                } else {
+                    temp = bitmap;
                 }
-                bitmap.recycle();
-                temp = getPictureTempById(id);
+                if (bitmap != temp) {
+                    bitmap.recycle();
+                }
             }
         }
         return temp;
     }
 
     public static Bitmap getShowBitmap(Context mContext, String id) {
-        // Ensure paths are initialized
         Config.initializePaths(mContext);
         
         Bitmap temp = getPictureById(id);

@@ -27,6 +27,7 @@ import androidx.preference.PreferenceManager;
 import java.util.Objects;
 
 import tool.xfy9326.floatpicture.Methods.ImageMethods;
+import tool.xfy9326.floatpicture.Methods.ManageMethods;
 import tool.xfy9326.floatpicture.Methods.WindowsMethods;
 import tool.xfy9326.floatpicture.R;
 import tool.xfy9326.floatpicture.Utils.Config;
@@ -101,9 +102,7 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
         Edit_Mode = intent.getBooleanExtra(Config.INTENT_PICTURE_EDIT_MODE, false);
         AlertDialog.Builder loading = new AlertDialog.Builder(requireActivity());
         loading.setCancelable(false);
-        if (!Edit_Mode) {
-            loading.setOnCancelListener(dialog -> WindowsMethods.createWindow(windowManager, floatImageView, touch_and_move, allow_picture_over_layout, position_x, position_y));
-        }
+        // Note: For new images, floating window will be created after image processing is complete
         View mView = inflater.inflate(R.layout.dialog_loading, requireActivity().findViewById(R.id.layout_dialog_loading));
         loading.setView(mView);
         final AlertDialog alertDialog = loading.show();
@@ -172,7 +171,11 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
                         floatImageView.setAlpha(picture_alpha);
                         floatImageView.setPictureId(PictureId);
                         
-                        // Note: WindowsMethods.createWindow() will be called by the dialog's onCancelListener
+                        // Show single floating image for new pictures
+                        if (!Edit_Mode && PictureId != null) {
+                            ManageMethods.showSingleFloatingImage(requireContext(), PictureId);
+                        }
+                        
                         alertDialog.cancel();
                     });
                 }
@@ -221,14 +224,26 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
 
     private void setAllowPictureOverLayout(boolean allow) {
         allow_picture_over_layout = allow;
-        windowManager.removeView(floatImageView);
+        if (floatImageView != null && floatImageView.getParent() != null) {
+            try {
+                windowManager.removeView(floatImageView);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         floatImageView.setOverLayout(allow_picture_over_layout);
         WindowsMethods.createWindow(windowManager, floatImageView, touch_and_move, allow, position_x, position_y);
     }
 
     private void setPictureTouchAndMove(boolean touchable_and_moveable) {
         touch_and_move = touchable_and_moveable;
-        windowManager.removeView(floatImageView);
+        if (floatImageView != null && floatImageView.getParent() != null) {
+            try {
+                windowManager.removeView(floatImageView);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         floatImageView.setMoveable(touchable_and_moveable);
         WindowsMethods.createWindow(windowManager, floatImageView, touchable_and_moveable, allow_picture_over_layout, position_x, position_y);
     }
@@ -482,8 +497,15 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
 
     private void onEditPicture(FloatImageView FloatImageView_Edit) {
         if (!onUseEditPicture) {
-            windowManager.removeView(floatImageView);
-            floatImageView.refreshDrawableState();
+            // Only remove view if it's actually attached to window manager
+            if (floatImageView != null && floatImageView.getParent() != null) {
+                try {
+                    windowManager.removeView(floatImageView);
+                    floatImageView.refreshDrawableState();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
             WindowsMethods.createWindow(windowManager, FloatImageView_Edit, touch_and_move, allow_picture_over_layout, position_x, position_y);
             onUseEditPicture = true;
         }
@@ -491,8 +513,14 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
 
     private void onSuccessEditPicture(FloatImageView floatImageView_Edit, Bitmap bitmap_Edit) {
         if (onUseEditPicture) {
-            windowManager.removeView(floatImageView_Edit);
-            floatImageView_Edit.refreshDrawableState();
+            if (floatImageView_Edit != null && floatImageView_Edit.getParent() != null) {
+                try {
+                    windowManager.removeView(floatImageView_Edit);
+                    floatImageView_Edit.refreshDrawableState();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
             bitmap_Edit.recycle();
             floatImageView.setImageBitmap(ImageMethods.resizeBitmap(bitmap, zoom, picture_degree));
             WindowsMethods.createWindow(windowManager, floatImageView, touch_and_move, allow_picture_over_layout, position_x, position_y);
@@ -502,8 +530,14 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
 
     private void onFailedEditPicture(FloatImageView floatImageView_Edit, Bitmap bitmap_Edit) {
         if (onUseEditPicture) {
-            windowManager.removeView(floatImageView_Edit);
-            floatImageView_Edit.refreshDrawableState();
+            if (floatImageView_Edit != null && floatImageView_Edit.getParent() != null) {
+                try {
+                    windowManager.removeView(floatImageView_Edit);
+                    floatImageView_Edit.refreshDrawableState();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
             bitmap_Edit.recycle();
             WindowsMethods.createWindow(windowManager, floatImageView, touch_and_move, allow_picture_over_layout, position_x, position_y);
             onUseEditPicture = false;
@@ -540,7 +574,13 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
     public void exit() {
         if (!Edit_Mode) {
             if (floatImageView != null) {
-                windowManager.removeView(floatImageView);
+                if (floatImageView.getParent() != null) {
+                    try {
+                        windowManager.removeView(floatImageView);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
                 bitmap.recycle();
                 floatImageView = null;
             }

@@ -48,7 +48,6 @@ public class MainActivity extends AppCompatActivity {
     public static void SnackShow(Activity mActivity, int resourceId) {
         CoordinatorLayout coordinatorLayout = mActivity.findViewById(R.id.main_layout_content);
         Snackbar.make(coordinatorLayout, mActivity.getString(resourceId), Snackbar.LENGTH_SHORT).show();
-        System.gc();
     }
 
     @Override

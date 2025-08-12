@@ -8,8 +8,6 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ImageView.ScaleType;
-import android.widget.TextView;
-import android.graphics.Color;
 
 import androidx.appcompat.widget.AppCompatImageView;
 
@@ -34,7 +32,6 @@ public class FloatImageView extends FrameLayout {
     private float mNowPositionY = Config.DATA_DEFAULT_PICTURE_POSITION_Y;
 
     private ImageView imageView;
-    private TextView packageNameTextView;
 
     public FloatImageView(Context context) {
         super(context);
@@ -57,18 +54,6 @@ public class FloatImageView extends FrameLayout {
         imageView.setLayoutParams(imageParams);
         imageView.setScaleType(ScaleType.MATRIX);
         addView(imageView);
-
-        // Create TextView for package name (hidden by default to avoid visual interference)
-        packageNameTextView = new TextView(context);
-        FrameLayout.LayoutParams textParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT);
-        packageNameTextView.setLayoutParams(textParams);
-        packageNameTextView.setTextColor(Color.WHITE);
-        packageNameTextView.setBackgroundColor(Color.TRANSPARENT);
-        packageNameTextView.setPadding(8, 4, 8, 4);
-        packageNameTextView.setVisibility(GONE); // Hide the package name display
-        addView(packageNameTextView);
 
         // Note: Don't add to WindowManager in constructor - this may be called from background thread
         // The view should be added to WindowManager explicitly when needed
@@ -96,7 +81,7 @@ public class FloatImageView extends FrameLayout {
     }
 
     public void updatePackageName(String packageName) {
-        packageNameTextView.setText(packageName);
+        // Package name tracking removed to reduce memory usage
     }
 
     @SuppressLint("ClickableViewAccessibility")

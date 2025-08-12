@@ -67,8 +67,8 @@ public class FloatEyeButton extends ImageView {
     private void init(Context context) {
         windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         
-        // 设置眼睛图标
-        setImageResource(R.drawable.ic_invisible);
+        // 设置眼睛图标 - 初始状态应该显示可见图标(表示当前图片是可见的)
+        setImageResource(R.drawable.ic_visible);
         setScaleType(ScaleType.CENTER_INSIDE);
         
         // 加载保存的位置
@@ -227,13 +227,13 @@ public class FloatEyeButton extends ImageView {
             // 隐藏所有浮动图片
             Log.d(TAG, "Hiding all floating windows");
             ManageMethods.setAllWindowsVisible(getContext(), false);
-            setImageResource(R.drawable.ic_visible);
+            setImageResource(R.drawable.ic_invisible); // 图片隐藏时显示不可见图标
             mainApplication.setWinVisible(false);
         } else {
             // 显示所有浮动图片
             Log.d(TAG, "Showing all floating windows");
             ManageMethods.setAllWindowsVisible(getContext(), true);
-            setImageResource(R.drawable.ic_invisible);
+            setImageResource(R.drawable.ic_visible); // 图片可见时显示可见图标
             mainApplication.setWinVisible(true);
         }
     }
@@ -273,9 +273,9 @@ public class FloatEyeButton extends ImageView {
 
     public void updateVisibilityIcon(boolean visible) {
         if (visible) {
-            setImageResource(R.drawable.ic_invisible);
+            setImageResource(R.drawable.ic_visible); // 图片可见时显示可见图标
         } else {
-            setImageResource(R.drawable.ic_visible);
+            setImageResource(R.drawable.ic_invisible); // 图片隐藏时显示不可见图标
         }
     }
 }

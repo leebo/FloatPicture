@@ -48,16 +48,8 @@ public class NotificationService extends Service {
     private Runnable updatePackageNameRunnable = new Runnable() {
         @Override
         public void run() {
-            String foregroundPackageName = ApplicationMethods.getForegroundAppPackageName(NotificationService.this);
-            if (foregroundPackageName != null) {
-                HashMap<String, View> registeredViews = ((MainApplication) getApplicationContext()).getRegister();
-                for (Map.Entry<String, View> entry : registeredViews.entrySet()) {
-                    if (entry.getValue() instanceof FloatImageView) {
-                        ((FloatImageView) entry.getValue()).updatePackageName(foregroundPackageName);
-                    }
-                }
-            }
-            handler.postDelayed(this, 1000); // Update every 1 second
+            // Package name tracking removed to reduce CPU and memory usage
+            handler.postDelayed(this, 5000); // Reduced frequency to 5 seconds
         }
     };
 
@@ -102,7 +94,7 @@ public class NotificationService extends Service {
             floatEyeButton.show();
         }
         
-        handler.post(updatePackageNameRunnable); // Start updating package names
+        // Removed package name updating to reduce memory usage
     }
 
     @Nullable
@@ -114,7 +106,7 @@ public class NotificationService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        handler.removeCallbacks(updatePackageNameRunnable); // Stop updating package names
+        handler.removeCallbacks(updatePackageNameRunnable);
         
         // 隐藏浮动眼睛按钮
         if (floatEyeButton != null) {

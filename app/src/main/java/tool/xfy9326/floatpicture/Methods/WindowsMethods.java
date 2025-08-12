@@ -61,8 +61,14 @@ public class WindowsMethods {
     }
 
     public static void updateWindow(WindowManager windowManager, FloatImageView pictureView, boolean touchable, boolean overLayout, int layoutPositionX, int layoutPositionY) {
-        WindowManager.LayoutParams layoutParams = getDefaultLayout(pictureView.getContext(), layoutPositionX, layoutPositionY, touchable, overLayout);
-        windowManager.updateViewLayout(pictureView, layoutParams);
+        if (pictureView != null && pictureView.getParent() != null) {
+            try {
+                WindowManager.LayoutParams layoutParams = getDefaultLayout(pictureView.getContext(), layoutPositionX, layoutPositionY, touchable, overLayout);
+                windowManager.updateViewLayout(pictureView, layoutParams);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public static void updateWindow(WindowManager windowManager, FloatImageView pictureView, Bitmap bitmap, boolean touchable, boolean overLayout, float zoom, float degree, int layoutPositionX, int layoutPositionY) {

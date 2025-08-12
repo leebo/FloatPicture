@@ -23,7 +23,6 @@ public class MainApplication extends Application {
     public void onCreate() {
         super.onCreate();
         
-        // Initialize storage paths first
         Config.initializePaths(this);
         
         ApplicationInit = false;
@@ -33,6 +32,20 @@ public class MainApplication extends Application {
         this.ViewRegister = new HashMap<>();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             this.safeWindowsAlpha = getSystemService(InputManager.class).getMaximumObscuringOpacityForTouch();
+        }
+    }
+    
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        clearMemoryCache();
+    }
+    
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if (level >= TRIM_MEMORY_MODERATE) {
+            clearMemoryCache();
         }
     }
 
@@ -94,5 +107,11 @@ public class MainApplication extends Application {
             return true;
         }
         return false;
+    }
+    
+    public void clearMemoryCache() {
+        // Clear any cached objects to free memory
+        ViewRegister.clear();
+        System.gc();
     }
 }

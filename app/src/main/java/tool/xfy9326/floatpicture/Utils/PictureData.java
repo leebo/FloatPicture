@@ -18,6 +18,12 @@ public class PictureData {
     private JSONObject detailObject;
     private JSONObject listObject;
     private JSONObject dataObject;
+    
+    // Simple cache to avoid repeated file reads
+    private static JSONObject cachedListObject;
+    private static JSONObject cachedDataObject;
+    private static long lastCacheTime = 0;
+    private static final long CACHE_TIMEOUT = 5000; // 5 seconds
 
     public PictureData() {
     }
@@ -162,21 +168,50 @@ public class PictureData {
     }
 
     private JSONObject getJSONFile(String FileName) {
+        long currentTime = System.currentTimeMillis();
+        
+        // Use cache if available and not expired
+        if (currentTime - lastCacheTime < CACHE_TIMEOUT) {
+            if (FileName.equals(ListFileName) && cachedListObject != null) {
+                return cachedListObject;
+            }
+            if (FileName.equals(DataFileName) && cachedDataObject != null) {
+                return cachedDataObject;
+            }
+        }
+        
+        // Read from file
         String content = IOMethods.readFile(Config.DEFAULT_DATA_DIR + FileName);
+        JSONObject result = new JSONObject();
         if (content != null) {
             try {
                 if (!content.isEmpty()) {
-                    return new JSONObject(content);
+                    result = new JSONObject(content);
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
-        return new JSONObject();
+        
+        // Update cache
+        if (FileName.equals(ListFileName)) {
+            cachedListObject = result;
+        } else if (FileName.equals(DataFileName)) {
+            cachedDataObject = result;
+        }
+        lastCacheTime = currentTime;
+        
+        return result;
     }
 
     @SuppressWarnings("UnusedReturnValue")
     private boolean setJSONFile(String FileName, JSONObject jsonObject) {
+        // Clear cache when writing to force refresh on next read
+        if (FileName.equals(ListFileName)) {
+            cachedListObject = null;
+        } else if (FileName.equals(DataFileName)) {
+            cachedDataObject = null;
+        }
         return IOMethods.writeFile(jsonObject.toString(), Config.DEFAULT_DATA_DIR + FileName);
     }
 
