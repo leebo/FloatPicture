@@ -2,6 +2,7 @@ package tool.xfy9326.floatpicture.View;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.os.Build;
@@ -22,6 +23,7 @@ public class FloatEyeButton extends ImageView {
     private static final String PREF_POS_X = "eye_button_pos_x";
     private static final String PREF_POS_Y = "eye_button_pos_y";
     private static final int LONG_PRESS_TIMEOUT = 500; // 长按时间阈值（毫秒）
+    private static final int DOUBLE_CLICK_TIMEOUT = 300; // 双击时间阈值（毫秒）
 
     private WindowManager windowManager;
     private WindowManager.LayoutParams layoutParams;
@@ -32,11 +34,26 @@ public class FloatEyeButton extends ImageView {
     private float startRawX, startRawY;
     private float currentX, currentY;
     
+    // 双击检测相关
+    private long lastClickTime = 0;
+    private boolean waitingForDoubleClick = false;
+    
     private Handler longPressHandler = new Handler(Looper.getMainLooper());
     private Runnable longPressRunnable = new Runnable() {
         @Override
         public void run() {
             isLongPressed = true;
+        }
+    };
+    
+    private Runnable singleClickRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!waitingForDoubleClick) {
+                // 执行单击操作
+                toggleFloatImages();
+            }
+            waitingForDoubleClick = false;
         }
     };
 
@@ -111,9 +128,11 @@ public class FloatEyeButton extends ImageView {
                         float deltaX = Math.abs(event.getRawX() - startRawX);
                         float deltaY = Math.abs(event.getRawY() - startRawY);
                         
-                        // 如果移动距离超过阈值，取消长按检测
+                        // 如果移动距离超过阈值，取消长按检测和双击等待
                         if (deltaX > 20 || deltaY > 20) {
                             longPressHandler.removeCallbacks(longPressRunnable);
+                            waitingForDoubleClick = false;
+                            longPressHandler.removeCallbacks(singleClickRunnable);
                         }
                         
                         // 如果已经长按或者移动距离较大，则进入拖动模式
@@ -146,6 +165,9 @@ public class FloatEyeButton extends ImageView {
                         } else {
                             // 拖动结束：保存位置
                             savePosition();
+                            // 取消双击等待
+                            waitingForDoubleClick = false;
+                            longPressHandler.removeCallbacks(singleClickRunnable);
                         }
                         
                         isMoving = false;
@@ -160,8 +182,32 @@ public class FloatEyeButton extends ImageView {
     @Override
     public boolean performClick() {
         super.performClick();
-        toggleFloatImages();
+        
+        long currentTime = System.currentTimeMillis();
+        
+        if (waitingForDoubleClick && (currentTime - lastClickTime) < DOUBLE_CLICK_TIMEOUT) {
+            // 双击检测到
+            longPressHandler.removeCallbacks(singleClickRunnable);
+            waitingForDoubleClick = false;
+            openMainActivity();
+        } else {
+            // 第一次点击，开始等待双击
+            waitingForDoubleClick = true;
+            lastClickTime = currentTime;
+            longPressHandler.postDelayed(singleClickRunnable, DOUBLE_CLICK_TIMEOUT);
+        }
+        
         return true;
+    }
+
+    private void openMainActivity() {
+        try {
+            Intent intent = new Intent(getContext(), tool.xfy9326.floatpicture.Activities.MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            getContext().startActivity(intent);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void toggleFloatImages() {
