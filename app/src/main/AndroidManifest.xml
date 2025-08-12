@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.SYSTEM_OVERLAY_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 
     <application
@@ -75,10 +76,10 @@
         </activity>
 
         <service
-            android:name=".NotificationService"
+            android:name=".Services.NotificationService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection">
+            android:foregroundServiceType="specialUse">
         </service>
 
         <receiver

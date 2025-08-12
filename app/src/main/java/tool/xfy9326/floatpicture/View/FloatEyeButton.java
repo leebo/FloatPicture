@@ -1,0 +1,217 @@
+package tool.xfy9326.floatpicture.View;
+
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.PixelFormat;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.ImageView;
+
+import tool.xfy9326.floatpicture.MainApplication;
+import tool.xfy9326.floatpicture.Methods.ManageMethods;
+import tool.xfy9326.floatpicture.R;
+
+public class FloatEyeButton extends ImageView {
+    private static final String PREFS_NAME = "float_eye_button_prefs";
+    private static final String PREF_POS_X = "eye_button_pos_x";
+    private static final String PREF_POS_Y = "eye_button_pos_y";
+    private static final int LONG_PRESS_TIMEOUT = 500; // 长按时间阈值（毫秒）
+
+    private WindowManager windowManager;
+    private WindowManager.LayoutParams layoutParams;
+    private boolean isMoving = false;
+    private boolean isLongPressed = false;
+    
+    private float startX, startY;
+    private float startRawX, startRawY;
+    private float currentX, currentY;
+    
+    private Handler longPressHandler = new Handler(Looper.getMainLooper());
+    private Runnable longPressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            isLongPressed = true;
+        }
+    };
+
+    public FloatEyeButton(Context context) {
+        super(context);
+        init(context);
+    }
+
+    private void init(Context context) {
+        windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        
+        // 设置眼睛图标
+        setImageResource(R.drawable.ic_invisible);
+        setScaleType(ScaleType.CENTER_INSIDE);
+        
+        // 加载保存的位置
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        currentX = prefs.getFloat(PREF_POS_X, 100); // 默认位置
+        currentY = prefs.getFloat(PREF_POS_Y, 100);
+        
+        setupLayoutParams();
+        setupTouchListener();
+    }
+
+    private void setupLayoutParams() {
+        layoutParams = new WindowManager.LayoutParams();
+        
+        // 设置窗口类型
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        } else {
+            layoutParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
+        }
+        
+        // 设置窗口标志 - 确保可以接收触摸事件
+        layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
+        
+        // 设置位置和大小
+        layoutParams.gravity = Gravity.START | Gravity.TOP;
+        layoutParams.x = (int) currentX;
+        layoutParams.y = (int) currentY;
+        layoutParams.width = 120; // 眼睛按钮大小
+        layoutParams.height = 120;
+        layoutParams.format = PixelFormat.TRANSLUCENT;
+        
+        // 设置窗口透明度
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            layoutParams.alpha = ((MainApplication) getContext().getApplicationContext()).getSafeWindowsAlpha();
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupTouchListener() {
+        setOnTouchListener(new OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startX = event.getX();
+                        startY = event.getY();
+                        startRawX = event.getRawX();
+                        startRawY = event.getRawY();
+                        isMoving = false;
+                        isLongPressed = false;
+                        
+                        // 开始长按检测
+                        longPressHandler.postDelayed(longPressRunnable, LONG_PRESS_TIMEOUT);
+                        return true;
+
+                    case MotionEvent.ACTION_MOVE:
+                        float deltaX = Math.abs(event.getRawX() - startRawX);
+                        float deltaY = Math.abs(event.getRawY() - startRawY);
+                        
+                        // 如果移动距离超过阈值，取消长按检测
+                        if (deltaX > 20 || deltaY > 20) {
+                            longPressHandler.removeCallbacks(longPressRunnable);
+                        }
+                        
+                        // 如果已经长按或者移动距离较大，则进入拖动模式
+                        if (isLongPressed || (deltaX > 20 || deltaY > 20)) {
+                            isMoving = true;
+                            
+                            // 更新位置
+                            currentX = event.getRawX() - startX;
+                            currentY = event.getRawY() - startY;
+                            
+                            layoutParams.x = (int) currentX;
+                            layoutParams.y = (int) currentY;
+                            
+                            try {
+                                windowManager.updateViewLayout(FloatEyeButton.this, layoutParams);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        // 取消长按检测
+                        longPressHandler.removeCallbacks(longPressRunnable);
+                        
+                        if (!isMoving) {
+                            // 短点击：切换浮动图片显示/隐藏
+                            performClick();
+                        } else {
+                            // 拖动结束：保存位置
+                            savePosition();
+                        }
+                        
+                        isMoving = false;
+                        isLongPressed = false;
+                        return true;
+                }
+                return false;
+            }
+        });
+    }
+
+    @Override
+    public boolean performClick() {
+        super.performClick();
+        toggleFloatImages();
+        return true;
+    }
+
+    private void toggleFloatImages() {
+        MainApplication mainApplication = (MainApplication) getContext().getApplicationContext();
+        if (mainApplication.getWinVisible()) {
+            // 隐藏所有浮动图片
+            ManageMethods.setAllWindowsVisible(getContext(), false);
+            setImageResource(R.drawable.ic_visible);
+            mainApplication.setWinVisible(false);
+        } else {
+            // 显示所有浮动图片
+            ManageMethods.setAllWindowsVisible(getContext(), true);
+            setImageResource(R.drawable.ic_invisible);
+            mainApplication.setWinVisible(true);
+        }
+    }
+
+    private void savePosition() {
+        SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putFloat(PREF_POS_X, currentX);
+        editor.putFloat(PREF_POS_Y, currentY);
+        editor.apply();
+    }
+
+    public void show() {
+        try {
+            if (getParent() == null) {
+                windowManager.addView(this, layoutParams);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void hide() {
+        try {
+            if (getParent() != null) {
+                windowManager.removeView(this);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void updateVisibilityIcon(boolean visible) {
+        if (visible) {
+            setImageResource(R.drawable.ic_invisible);
+        } else {
+            setImageResource(R.drawable.ic_visible);
+        }
+    }
+}

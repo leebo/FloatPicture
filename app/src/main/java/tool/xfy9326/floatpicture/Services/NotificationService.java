@@ -34,6 +34,7 @@ import tool.xfy9326.floatpicture.Methods.ManageMethods;
 import tool.xfy9326.floatpicture.R;
 import tool.xfy9326.floatpicture.Utils.Config;
 import tool.xfy9326.floatpicture.View.FloatImageView; // Added
+import tool.xfy9326.floatpicture.View.FloatEyeButton; // Added
 import tool.xfy9326.floatpicture.View.ManageListAdapter;
 
 public class NotificationService extends Service {
@@ -41,6 +42,7 @@ public class NotificationService extends Service {
     private RemoteViews remoteViews;
     private NotificationCompat.Builder builder_manage;
     private NotificationButtonBroadcastReceiver notificationButtonBroadcastReceiver;
+    private FloatEyeButton floatEyeButton;
 
     private Handler handler = new Handler(Looper.getMainLooper());
     private Runnable updatePackageNameRunnable = new Runnable() {
@@ -93,6 +95,13 @@ public class NotificationService extends Service {
             builder_manage = createNotification();
             startForeground(Config.NOTIFICATION_ID, builder_manage.build());
         }
+        
+        // 创建并显示浮动眼睛按钮
+        if (floatEyeButton == null) {
+            floatEyeButton = new FloatEyeButton(this);
+            floatEyeButton.show();
+        }
+        
         handler.post(updatePackageNameRunnable); // Start updating package names
     }
 
@@ -106,6 +115,13 @@ public class NotificationService extends Service {
     public void onDestroy() {
         super.onDestroy();
         handler.removeCallbacks(updatePackageNameRunnable); // Stop updating package names
+        
+        // 隐藏浮动眼睛按钮
+        if (floatEyeButton != null) {
+            floatEyeButton.hide();
+            floatEyeButton = null;
+        }
+        
         if (notificationButtonBroadcastReceiver != null) {
             unregisterReceiver(notificationButtonBroadcastReceiver);
             notificationButtonBroadcastReceiver = null;
@@ -138,11 +154,8 @@ public class NotificationService extends Service {
         remoteViews.setImageViewResource(R.id.imageview_notification_application, R.mipmap.ic_launcher);
         remoteViews.setTextViewText(R.id.textview_picture_num, getString(R.string.notification_picture_count, String.valueOf(mainApplication.getViewCount())));
 
-        remoteViews.setImageViewResource(R.id.imageview_set_picture_view, R.drawable.ic_invisible);
-        Intent intent_picture_show = new Intent();
-        intent_picture_show.setAction(Config.INTENT_ACTION_NOTIFICATION_BUTTON_CLICK);
-        PendingIntent pendingIntent_picture_show = PendingIntent.getBroadcast(this, 1, intent_picture_show, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        remoteViews.setOnClickPendingIntent(R.id.imageview_set_picture_view, pendingIntent_picture_show);
+        // 移除通知栏中的眼睛按钮，使用新的浮动眼睛按钮替代
+        remoteViews.setViewVisibility(R.id.imageview_set_picture_view, View.GONE);
 
         builder.setContent(remoteViews);
         return builder;
@@ -159,10 +172,18 @@ public class NotificationService extends Service {
                         ManageMethods.setAllWindowsVisible(context, false);
                         remoteViews.setImageViewResource(R.id.imageview_set_picture_view, R.drawable.ic_visible);
                         mainApplication.setWinVisible(false);
+                        // 更新浮动眼睛按钮图标
+                        if (floatEyeButton != null) {
+                            floatEyeButton.updateVisibilityIcon(false);
+                        }
                     } else {
                         ManageMethods.setAllWindowsVisible(context, true);
                         remoteViews.setImageViewResource(R.id.imageview_set_picture_view, R.drawable.ic_invisible);
                         mainApplication.setWinVisible(true);
+                        // 更新浮动眼睛按钮图标
+                        if (floatEyeButton != null) {
+                            floatEyeButton.updateVisibilityIcon(true);
+                        }
                     }
                     ManageListAdapter manageListAdapter = ((MainApplication) getApplicationContext()).getManageListAdapter();
                     if (manageListAdapter != null) {

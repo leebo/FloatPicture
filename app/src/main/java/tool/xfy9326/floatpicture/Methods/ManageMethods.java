@@ -74,9 +74,13 @@ public class ManageMethods {
         pictureData.setDataControl(id);
         if (pictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, Config.DATA_DEFAULT_PICTURE_SHOW_ENABLED)) {
             FloatImageView floatImageView = ImageMethods.getFloatImageViewById(mContext, id);
-            if (floatImageView != null) {
-                getWindowManager(mContext).removeView(floatImageView);
-                floatImageView.refreshDrawableState();
+            if (floatImageView != null && floatImageView.getParent() != null) {
+                try {
+                    getWindowManager(mContext).removeView(floatImageView);
+                    floatImageView.refreshDrawableState();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         }
         pictureData.remove();
@@ -92,8 +96,14 @@ public class ManageMethods {
                 pictureData.setDataControl(entry.getKey().toString());
                 if (pictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, Config.DATA_DEFAULT_PICTURE_SHOW_ENABLED)) {
                     FloatImageView floatImageView = (FloatImageView) entry.getValue();
-                    windowManager.removeView(floatImageView);
-                    floatImageView.refreshDrawableState();
+                    if (floatImageView != null && floatImageView.getParent() != null) {
+                        try {
+                            windowManager.removeView(floatImageView);
+                            floatImageView.refreshDrawableState();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
             }
         }
@@ -155,19 +165,31 @@ public class ManageMethods {
 
     private static void hideWindowById(Context mContext, String id) {
         FloatImageView floatImageView = ImageMethods.getFloatImageViewById(mContext, id);
-        getWindowManager(mContext).removeView(floatImageView);
+        if (floatImageView != null && floatImageView.getParent() != null) {
+            try {
+                getWindowManager(mContext).removeView(floatImageView);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private static void showWindowById(Context mContext, String id) {
         FloatImageView floatImageView = ImageMethods.getFloatImageViewById(mContext, id);
-        PictureData pictureData = new PictureData();
-        pictureData.setDataControl(id);
-        int positionX = pictureData.getInt(Config.DATA_PICTURE_POSITION_X, Config.DATA_DEFAULT_PICTURE_POSITION_X);
-        int positionY = pictureData.getInt(Config.DATA_PICTURE_POSITION_Y, Config.DATA_DEFAULT_PICTURE_POSITION_Y);
-        boolean touch_and_move = pictureData.getBoolean(Config.DATA_PICTURE_TOUCH_AND_MOVE, Config.DATA_DEFAULT_PICTURE_TOUCH_AND_MOVE);
-        boolean over_layout = pictureData.getBoolean(Config.DATA_ALLOW_PICTURE_OVER_LAYOUT, Config.DATA_DEFAULT_ALLOW_PICTURE_OVER_LAYOUT);
-        WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(mContext, positionX, positionY, touch_and_move, over_layout);
-        getWindowManager(mContext).addView(floatImageView, layoutParams);
+        if (floatImageView != null && floatImageView.getParent() == null) {
+            try {
+                PictureData pictureData = new PictureData();
+                pictureData.setDataControl(id);
+                int positionX = pictureData.getInt(Config.DATA_PICTURE_POSITION_X, Config.DATA_DEFAULT_PICTURE_POSITION_X);
+                int positionY = pictureData.getInt(Config.DATA_PICTURE_POSITION_Y, Config.DATA_DEFAULT_PICTURE_POSITION_Y);
+                boolean touch_and_move = pictureData.getBoolean(Config.DATA_PICTURE_TOUCH_AND_MOVE, Config.DATA_DEFAULT_PICTURE_TOUCH_AND_MOVE);
+                boolean over_layout = pictureData.getBoolean(Config.DATA_ALLOW_PICTURE_OVER_LAYOUT, Config.DATA_DEFAULT_ALLOW_PICTURE_OVER_LAYOUT);
+                WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(mContext, positionX, positionY, touch_and_move, over_layout);
+                getWindowManager(mContext).addView(floatImageView, layoutParams);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public static void createToggleButton(Context context) {
