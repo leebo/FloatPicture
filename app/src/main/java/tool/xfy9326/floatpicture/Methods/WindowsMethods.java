@@ -31,20 +31,28 @@ public class WindowsMethods {
         } else {
             layoutParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
         }
-        layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        // Essential flags for floating overlay that doesn't interfere with user interactions
+        layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL 
+                            | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                            | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;  // Make overlay non-touchable by default
+        
         if (overLayout) {
             layoutParams.flags = layoutParams.flags | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
         } else {
             layoutParams.flags = layoutParams.flags | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
         }
-        if (!touchable) {
-            layoutParams.flags = layoutParams.flags | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+        
+        // Only make touchable if explicitly requested AND user wants to move the window
+        if (touchable) {
+            layoutParams.flags = layoutParams.flags & ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
         }
+        
         layoutParams.x = layoutPositionX;
         layoutParams.y = layoutPositionY;
         layoutParams.gravity = Gravity.START | Gravity.TOP;
-        layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT;
-        layoutParams.height = WindowManager.LayoutParams.MATCH_PARENT;
+        // Use WRAP_CONTENT to only occupy the space needed by the image
+        layoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
+        layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
         layoutParams.format = PixelFormat.TRANSLUCENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             layoutParams.alpha = ((MainApplication) context.getApplicationContext()).getSafeWindowsAlpha();

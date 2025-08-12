@@ -124,9 +124,29 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
                     default_zoom = ImageMethods.getDefaultZoom(requireContext(), bitmap, false);
                     zoom = pictureData.getFloat(Config.DATA_PICTURE_ZOOM, default_zoom);
                     floatImageView = ImageMethods.getFloatImageViewById(requireContext(), PictureId);
+                    
+                    requireActivity().runOnUiThread(() -> {
+                        alertDialog.cancel();
+                    });
                 } else {
                     //New
+                    if (intent.getData() == null) {
+                        requireActivity().runOnUiThread(() -> {
+                            alertDialog.cancel();
+                            requireActivity().finish();
+                        });
+                        return;
+                    }
+                    
                     PictureId = ImageMethods.setNewImage(getActivity(), intent.getData());
+                    if (PictureId == null) {
+                        requireActivity().runOnUiThread(() -> {
+                            alertDialog.cancel();
+                            requireActivity().finish();
+                        });
+                        return;
+                    }
+                    
                     pictureData.setDataControl(PictureId);
                     PictureName = getString(R.string.new_picture_name);
                     position_x = Config.DATA_DEFAULT_PICTURE_POSITION_X;
@@ -136,13 +156,26 @@ public class PictureSettingsFragment extends PreferenceFragmentCompat {
                     touch_and_move = Config.DATA_DEFAULT_PICTURE_TOUCH_AND_MOVE;
                     allow_picture_over_layout = Config.DATA_DEFAULT_ALLOW_PICTURE_OVER_LAYOUT;
                     bitmap = ImageMethods.getShowBitmap(requireContext(), PictureId);
+                    if (bitmap == null) {
+                        requireActivity().runOnUiThread(() -> {
+                            alertDialog.cancel();
+                            requireActivity().finish();
+                        });
+                        return;
+                    }
                     default_zoom = ImageMethods.getDefaultZoom(requireContext(), bitmap, false);
                     zoom = 1.0f;
-                    floatImageView = ImageMethods.createPictureView(requireContext(), bitmap, touch_and_move, allow_picture_over_layout, zoom, picture_degree);
-                    floatImageView.setAlpha(picture_alpha);
-                    floatImageView.setPictureId(PictureId);
+                    
+                    // Create FloatImageView on main thread
+                    requireActivity().runOnUiThread(() -> {
+                        floatImageView = ImageMethods.createPictureView(requireContext(), bitmap, touch_and_move, allow_picture_over_layout, zoom, picture_degree);
+                        floatImageView.setAlpha(picture_alpha);
+                        floatImageView.setPictureId(PictureId);
+                        
+                        // Note: WindowsMethods.createWindow() will be called by the dialog's onCancelListener
+                        alertDialog.cancel();
+                    });
                 }
-                alertDialog.cancel();
             }
         }).start();
     }

@@ -1,5 +1,6 @@
 package tool.xfy9326.floatpicture.Utils;
 
+import android.content.Context;
 import android.os.Environment;
 
 import java.io.File;
@@ -62,10 +63,37 @@ public class Config {
     public final static String PREFERENCE_FIRST_LAUNCH = "first_launch";
 
     public final static String LICENSE_PATH_APPLICATION = "LICENSE";
-    private final static String DEFAULT_ROOT_DIR = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator;
-    private final static String DEFAULT_APPLICATION_DIR = DEFAULT_ROOT_DIR + "FloatPicture" + File.separator;
-    public final static String DEFAULT_PICTURE_TEMP_DIR = DEFAULT_APPLICATION_DIR + "Pictures" + File.separator + ".TEMP" + File.separator;
-    final static String DEFAULT_DATA_DIR = DEFAULT_APPLICATION_DIR + "Data" + File.separator;
-    public final static String DEFAULT_PICTURE_DIR = DEFAULT_APPLICATION_DIR + "Pictures" + File.separator;
-    public final static String NO_MEDIA_FILE_DIR = DEFAULT_APPLICATION_DIR + File.separator + ".nomedia";
+    // Use app-specific external storage to avoid permission issues on Android 10+
+    private static String getAppExternalStorageDir(Context context) {
+        if (context != null) {
+            File externalFilesDir = context.getExternalFilesDir(null);
+            if (externalFilesDir != null) {
+                return externalFilesDir.getAbsolutePath() + File.separator;
+            }
+        }
+        // Fallback to traditional external storage
+        return Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "FloatPicture" + File.separator;
+    }
+    
+    // These will be initialized dynamically
+    private static String DEFAULT_APPLICATION_DIR = null;
+    public static String DEFAULT_PICTURE_TEMP_DIR = null;
+    static String DEFAULT_DATA_DIR = null;
+    public static String DEFAULT_PICTURE_DIR = null;
+    public static String NO_MEDIA_FILE_DIR = null;
+    
+    public static void initializePaths(Context context) {
+        if (DEFAULT_APPLICATION_DIR == null) {
+            File externalFilesDir = context.getExternalFilesDir(null);
+            if (externalFilesDir != null) {
+                DEFAULT_APPLICATION_DIR = externalFilesDir.getAbsolutePath() + File.separator;
+            } else {
+                DEFAULT_APPLICATION_DIR = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "FloatPicture" + File.separator;
+            }
+            DEFAULT_PICTURE_TEMP_DIR = DEFAULT_APPLICATION_DIR + "Pictures" + File.separator + ".TEMP" + File.separator;
+            DEFAULT_DATA_DIR = DEFAULT_APPLICATION_DIR + "Data" + File.separator;
+            DEFAULT_PICTURE_DIR = DEFAULT_APPLICATION_DIR + "Pictures" + File.separator;
+            NO_MEDIA_FILE_DIR = DEFAULT_APPLICATION_DIR + ".nomedia";
+        }
+    }
 }

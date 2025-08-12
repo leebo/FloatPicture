@@ -2,6 +2,7 @@ package tool.xfy9326.floatpicture.View;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.view.MotionEvent;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -16,6 +17,10 @@ import tool.xfy9326.floatpicture.Methods.WindowsMethods;
 import tool.xfy9326.floatpicture.Utils.Config;
 
 public class FloatImageView extends FrameLayout {
+    private static final String PREFS_NAME = "tool_float_picture_prefs";
+    private static final String PREF_POS_X = "float_picture_pos_x";
+    private static final String PREF_POS_Y = "float_picture_pos_y";
+
     private String PictureId = "";
     private WindowManager windowManager;
     private boolean moveable = false;
@@ -38,6 +43,12 @@ public class FloatImageView extends FrameLayout {
 
     private void init(Context context) {
         windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+
+        // Load saved position
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        mNowPositionX = prefs.getFloat(PREF_POS_X, Config.DATA_DEFAULT_PICTURE_POSITION_X);
+        mNowPositionY = prefs.getFloat(PREF_POS_Y, Config.DATA_DEFAULT_PICTURE_POSITION_Y);
+
         // Create and add ImageView
         imageView = new AppCompatImageView(context);
         FrameLayout.LayoutParams imageParams = new FrameLayout.LayoutParams(
@@ -57,6 +68,9 @@ public class FloatImageView extends FrameLayout {
         packageNameTextView.setBackgroundColor(Color.BLACK);
         packageNameTextView.setPadding(8, 4, 8, 4);
         addView(packageNameTextView);
+
+        // Note: Don't add to WindowManager in constructor - this may be called from background thread
+        // The view should be added to WindowManager explicitly when needed
     }
 
     @SuppressWarnings("unused")
@@ -88,7 +102,8 @@ public class FloatImageView extends FrameLayout {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (!moveable) {
-            return imageView.onTouchEvent(event);
+            // When not moveable, don't consume touch events - let them pass through
+            return false;
         }
         x = event.getRawX();
         y = event.getRawY();
@@ -105,6 +120,12 @@ public class FloatImageView extends FrameLayout {
                 getNowPosition();
                 updatePosition();
                 mTouchStartX = mTouchStartY = 0;
+                // Save position
+                SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putFloat(PREF_POS_X, mNowPositionX);
+                editor.putFloat(PREF_POS_Y, mNowPositionY);
+                editor.apply();
             }
         }
         return super.onTouchEvent(event);

@@ -41,13 +41,43 @@ public class ImageMethods {
     }
 
     private static String getNewPictureId(Context mContext, Uri uri) {
-        return System.currentTimeMillis() + "-" + CodeMethods.getFileMD5String(mContext, uri);
+        try {
+            String md5 = CodeMethods.getFileMD5String(mContext, uri);
+            if (md5 == null) {
+                return null;
+            }
+            return System.currentTimeMillis() + "-" + md5;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public static String setNewImage(Context mContext, Uri uri) {
         try {
+            if (uri == null) {
+                return null;
+            }
+            
+            // Ensure paths are initialized
+            Config.initializePaths(mContext);
+            
             String id = getNewPictureId(mContext, uri);
+            if (id == null) {
+                return null;
+            }
+            
             Bitmap bitmap = getNewBitmap(mContext, uri);
+            if (bitmap == null) {
+                return null;
+            }
+            
+            // Ensure directory exists
+            File dir = new File(Config.DEFAULT_PICTURE_DIR);
+            if (!dir.exists() && !dir.mkdirs()) {
+                return null;
+            }
+            
             IOMethods.saveBitmap(bitmap, PreferenceManager.getDefaultSharedPreferences(mContext).getInt(Config.PREFERENCE_NEW_PICTURE_QUALITY, 100), Config.DEFAULT_PICTURE_DIR + id);
             return id;
         } catch (Exception e) {
