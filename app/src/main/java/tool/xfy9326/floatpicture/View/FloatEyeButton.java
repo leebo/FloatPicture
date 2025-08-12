@@ -8,6 +8,7 @@ import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -19,6 +20,7 @@ import tool.xfy9326.floatpicture.Methods.ManageMethods;
 import tool.xfy9326.floatpicture.R;
 
 public class FloatEyeButton extends ImageView {
+    private static final String TAG = "FloatEyeButton";
     private static final String PREFS_NAME = "float_eye_button_prefs";
     private static final String PREF_POS_X = "eye_button_pos_x";
     private static final String PREF_POS_Y = "eye_button_pos_y";
@@ -49,16 +51,16 @@ public class FloatEyeButton extends ImageView {
     private Runnable singleClickRunnable = new Runnable() {
         @Override
         public void run() {
-            if (!waitingForDoubleClick) {
-                // 执行单击操作
-                toggleFloatImages();
-            }
+            // 执行单击操作（在超时后）
+            Log.d(TAG, "Executing single click action");
+            toggleFloatImages();
             waitingForDoubleClick = false;
         }
     };
 
     public FloatEyeButton(Context context) {
         super(context);
+        Log.d(TAG, "Creating FloatEyeButton");
         init(context);
     }
 
@@ -113,6 +115,7 @@ public class FloatEyeButton extends ImageView {
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
+                        Log.d(TAG, "ACTION_DOWN received");
                         startX = event.getX();
                         startY = event.getY();
                         startRawX = event.getRawX();
@@ -161,6 +164,7 @@ public class FloatEyeButton extends ImageView {
                         
                         if (!isMoving) {
                             // 短点击：切换浮动图片显示/隐藏
+                            Log.d(TAG, "ACTION_UP - performing click");
                             performClick();
                         } else {
                             // 拖动结束：保存位置
@@ -182,16 +186,19 @@ public class FloatEyeButton extends ImageView {
     @Override
     public boolean performClick() {
         super.performClick();
+        Log.d(TAG, "performClick called");
         
         long currentTime = System.currentTimeMillis();
         
         if (waitingForDoubleClick && (currentTime - lastClickTime) < DOUBLE_CLICK_TIMEOUT) {
             // 双击检测到
+            Log.d(TAG, "Double click detected - opening main activity");
             longPressHandler.removeCallbacks(singleClickRunnable);
             waitingForDoubleClick = false;
             openMainActivity();
         } else {
             // 第一次点击，开始等待双击
+            Log.d(TAG, "Single click - waiting for potential double click");
             waitingForDoubleClick = true;
             lastClickTime = currentTime;
             longPressHandler.postDelayed(singleClickRunnable, DOUBLE_CLICK_TIMEOUT);
@@ -211,14 +218,20 @@ public class FloatEyeButton extends ImageView {
     }
 
     private void toggleFloatImages() {
+        Log.d(TAG, "toggleFloatImages called");
         MainApplication mainApplication = (MainApplication) getContext().getApplicationContext();
-        if (mainApplication.getWinVisible()) {
+        boolean winVisible = mainApplication.getWinVisible();
+        Log.d(TAG, "Current window visible state: " + winVisible);
+        
+        if (winVisible) {
             // 隐藏所有浮动图片
+            Log.d(TAG, "Hiding all floating windows");
             ManageMethods.setAllWindowsVisible(getContext(), false);
             setImageResource(R.drawable.ic_visible);
             mainApplication.setWinVisible(false);
         } else {
             // 显示所有浮动图片
+            Log.d(TAG, "Showing all floating windows");
             ManageMethods.setAllWindowsVisible(getContext(), true);
             setImageResource(R.drawable.ic_invisible);
             mainApplication.setWinVisible(true);
@@ -236,9 +249,14 @@ public class FloatEyeButton extends ImageView {
     public void show() {
         try {
             if (getParent() == null) {
+                Log.d(TAG, "Adding FloatEyeButton to window manager at position (" + layoutParams.x + ", " + layoutParams.y + ")");
                 windowManager.addView(this, layoutParams);
+                Log.d(TAG, "FloatEyeButton successfully added to window manager");
+            } else {
+                Log.d(TAG, "FloatEyeButton already has a parent, not adding to window manager");
             }
         } catch (Exception e) {
+            Log.e(TAG, "Error adding FloatEyeButton to window manager", e);
             e.printStackTrace();
         }
     }
