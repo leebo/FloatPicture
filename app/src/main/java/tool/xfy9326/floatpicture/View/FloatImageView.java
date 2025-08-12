@@ -58,15 +58,16 @@ public class FloatImageView extends FrameLayout {
         imageView.setScaleType(ScaleType.MATRIX);
         addView(imageView);
 
-        // Create and add TextView for package name
+        // Create TextView for package name (hidden by default to avoid visual interference)
         packageNameTextView = new TextView(context);
         FrameLayout.LayoutParams textParams = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT);
         packageNameTextView.setLayoutParams(textParams);
         packageNameTextView.setTextColor(Color.WHITE);
-        packageNameTextView.setBackgroundColor(Color.BLACK);
+        packageNameTextView.setBackgroundColor(Color.TRANSPARENT);
         packageNameTextView.setPadding(8, 4, 8, 4);
+        packageNameTextView.setVisibility(GONE); // Hide the package name display
         addView(packageNameTextView);
 
         // Note: Don't add to WindowManager in constructor - this may be called from background thread
