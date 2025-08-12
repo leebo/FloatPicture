@@ -33,10 +33,16 @@ public class ImageMethods {
     }
 
     private static Bitmap getPictureById(String id) {
+        if (Config.DEFAULT_PICTURE_DIR == null) {
+            return null;
+        }
         return getBitmapFromFile(new File(Config.DEFAULT_PICTURE_DIR + id));
     }
 
     private static Bitmap getPictureTempById(String id) {
+        if (Config.DEFAULT_PICTURE_TEMP_DIR == null) {
+            return null;
+        }
         return getBitmapFromFile(new File(Config.DEFAULT_PICTURE_TEMP_DIR + id));
     }
 
@@ -181,13 +187,18 @@ public class ImageMethods {
     }
 
     public static Bitmap getPreviewBitmap(Context mContext, String id) {
+        // Ensure paths are initialized
+        Config.initializePaths(mContext);
+        
         Bitmap temp = getPictureTempById(id);
         if (temp == null) {
             Bitmap bitmap = getPictureById(id);
             if (bitmap == null) {
                 temp = getEditBitmap(mContext, 50, 50);
             } else {
-                IOMethods.saveBitmap(bitmap, 50, Config.DEFAULT_PICTURE_TEMP_DIR + id);
+                if (Config.DEFAULT_PICTURE_TEMP_DIR != null) {
+                    IOMethods.saveBitmap(bitmap, 50, Config.DEFAULT_PICTURE_TEMP_DIR + id);
+                }
                 bitmap.recycle();
                 temp = getPictureTempById(id);
             }
@@ -196,6 +207,9 @@ public class ImageMethods {
     }
 
     public static Bitmap getShowBitmap(Context mContext, String id) {
+        // Ensure paths are initialized
+        Config.initializePaths(mContext);
+        
         Bitmap temp = getPictureById(id);
         if (temp == null) {
             Bitmap bitmap = getPictureTempById(id);
@@ -210,6 +224,9 @@ public class ImageMethods {
     }
 
     public static boolean isPictureFileExist(String id) {
+        if (Config.DEFAULT_PICTURE_DIR == null) {
+            return false;
+        }
         File picture = new File(Config.DEFAULT_PICTURE_DIR + id);
         return picture.exists();
     }
@@ -217,15 +234,21 @@ public class ImageMethods {
     public static void clearAllTemp(Context mContext, String id) {
         MainApplication mainApplication = (MainApplication) mContext.getApplicationContext();
         mainApplication.unregisterView(id);
-        File imageFile = new File(Config.DEFAULT_PICTURE_DIR + id);
-        File tempFile = new File(Config.DEFAULT_PICTURE_TEMP_DIR + id);
-        if (imageFile.exists()) {
-            //noinspection ResultOfMethodCallIgnored
-            imageFile.delete();
+        
+        if (Config.DEFAULT_PICTURE_DIR != null) {
+            File imageFile = new File(Config.DEFAULT_PICTURE_DIR + id);
+            if (imageFile.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                imageFile.delete();
+            }
         }
-        if (tempFile.exists()) {
-            //noinspection ResultOfMethodCallIgnored
-            tempFile.delete();
+        
+        if (Config.DEFAULT_PICTURE_TEMP_DIR != null) {
+            File tempFile = new File(Config.DEFAULT_PICTURE_TEMP_DIR + id);
+            if (tempFile.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                tempFile.delete();
+            }
         }
     }
 }
