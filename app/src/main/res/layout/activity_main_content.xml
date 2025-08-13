@@ -7,7 +7,33 @@
     android:fitsSystemWindows="true"
     tools:context=".Activities.MainActivity">
 
-    
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/AppTheme.AppBarOverlay">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/colorPrimary"
+            android:fitsSystemWindows="true"
+            app:popupTheme="@style/AppTheme.PopupOverlay">
+
+            <!-- Global Toggle Button in Toolbar -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_global_toggle"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="@string/toggle_floating_pictures"
+                app:icon="@drawable/ic_visibility" />
+
+        </com.google.android.material.appbar.MaterialToolbar>
+
+    </com.google.android.material.appbar.AppBarLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/main_button_add"
@@ -25,19 +51,18 @@
         app:pressedTranslationZ="12dp"
         app:srcCompat="@drawable/ic_add" />
 
-    
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginTop="?attr/actionBarSize"
         android:orientation="vertical">
 
         <tool.xfy9326.floatpicture.View.AdvancedRecyclerView
-        android:id="@+id/main_list_manage"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scrollbars="none"
-        app:layoutManager="LinearLayoutManager" />
+            android:id="@+id/main_list_manage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="none"
+            app:layoutManager="LinearLayoutManager" />
 
         <include
             android:id="@+id/layout_widget_empty_view"

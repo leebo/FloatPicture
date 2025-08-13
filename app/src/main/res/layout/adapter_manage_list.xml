@@ -23,13 +23,35 @@
             android:layout_margin="6dp">
 
 
-            <ImageView
-                android:id="@+id/adapter_picture_preview"
+            <FrameLayout
+                android:id="@+id/adapter_picture_frame"
                 android:layout_width="80dp"
                 android:layout_height="100dp"
-                android:contentDescription="@string/adapter_image_description"
-                android:src="@color/cardview_light_background"
-                tools:ignore="PrivateResource" />
+                android:padding="2dp">
+
+                <ImageView
+                    android:id="@+id/adapter_picture_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/adapter_image_description"
+                    android:src="@color/cardview_light_background"
+                    android:scaleType="centerCrop"
+                    tools:ignore="PrivateResource" />
+
+                <!-- Active state indicator icon in top-right corner -->
+                <ImageView
+                    android:id="@+id/adapter_active_indicator"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="4dp"
+                    android:src="@drawable/ic_visibility"
+                    android:background="@android:color/white"
+                    android:padding="2dp"
+                    android:visibility="gone"
+                    android:contentDescription="Active Picture Indicator" />
+
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -49,19 +71,7 @@
 
             </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center|end"
-                android:orientation="vertical">
-
-                <androidx.appcompat.widget.SwitchCompat
-                    android:id="@+id/adapter_picture_show"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-
-            </LinearLayout>
+            <!-- Removed switch - single click activation now -->
 
         </LinearLayout>
 

@@ -21,75 +21,37 @@ import java.util.Objects;
 import tool.xfy9326.floatpicture.MainApplication;
 import tool.xfy9326.floatpicture.R;
 import tool.xfy9326.floatpicture.Utils.Config;
+import tool.xfy9326.floatpicture.Utils.PictureData;
 import tool.xfy9326.floatpicture.View.FloatImageView;
 
 public class ImageMethods {
 
-    private static Bitmap getBitmapFromFile(File imageFile) {
-        if (imageFile.exists() && imageFile.isFile() && imageFile.canRead()) {
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inSampleSize = 1;
-            options.inPreferredConfig = Bitmap.Config.RGB_565;
-            return BitmapFactory.decodeFile(imageFile.getAbsolutePath(), options);
-        }
-        return null;
-    }
-
-    private static Bitmap getPictureById(String id) {
-        if (Config.DEFAULT_PICTURE_DIR == null) {
-            return null;
-        }
-        return getBitmapFromFile(new File(Config.DEFAULT_PICTURE_DIR + id));
-    }
-
-    private static Bitmap getPictureTempById(String id) {
-        if (Config.DEFAULT_PICTURE_TEMP_DIR == null) {
-            return null;
-        }
-        return getBitmapFromFile(new File(Config.DEFAULT_PICTURE_TEMP_DIR + id));
-    }
-
-    private static String getNewPictureId(Context mContext, Uri uri) {
-        try {
-            String md5 = CodeMethods.getFileMD5String(mContext, uri);
-            if (md5 == null) {
-                return null;
-            }
-            return System.currentTimeMillis() + "-" + md5;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
+    // Removed obsolete file-based methods - now using URI-based storage directly
 
     public static String setNewImage(Context mContext, Uri uri) {
         try {
             if (uri == null) {
+                android.util.Log.e("FloatPicture", "setNewImage: uri is null");
                 return null;
             }
             
-            // Ensure paths are initialized
-            Config.initializePaths(mContext);
+            // Generate a unique ID for this image
+            String id = System.currentTimeMillis() + "-" + uri.toString().hashCode();
+            android.util.Log.d("FloatPicture", "Generated picture ID: " + id + " for URI: " + uri);
             
-            String id = getNewPictureId(mContext, uri);
-            if (id == null) {
+            // Test if we can load the bitmap from URI to validate it
+            Bitmap testBitmap = getNewBitmap(mContext, uri);
+            if (testBitmap == null) {
+                android.util.Log.e("FloatPicture", "setNewImage: failed to load bitmap from uri");
                 return null;
             }
+            android.util.Log.d("FloatPicture", "Validated bitmap: " + testBitmap.getWidth() + "x" + testBitmap.getHeight());
+            testBitmap.recycle(); // Clean up test bitmap
             
-            Bitmap bitmap = getNewBitmap(mContext, uri);
-            if (bitmap == null) {
-                return null;
-            }
-            
-            // Ensure directory exists
-            File dir = new File(Config.DEFAULT_PICTURE_DIR);
-            if (!dir.exists() && !dir.mkdirs()) {
-                return null;
-            }
-            
-            IOMethods.saveBitmap(bitmap, PreferenceManager.getDefaultSharedPreferences(mContext).getInt(Config.PREFERENCE_NEW_PICTURE_QUALITY, 100), Config.DEFAULT_PICTURE_DIR + id);
+            android.util.Log.d("FloatPicture", "Image URI registered successfully with ID: " + id);
             return id;
         } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "setNewImage: Exception occurred", e);
             e.printStackTrace();
             return null;
         }
@@ -207,70 +169,101 @@ public class ImageMethods {
     }
 
     public static Bitmap getPreviewBitmap(Context mContext, String id) {
-        Config.initializePaths(mContext);
-        
-        Bitmap temp = getPictureTempById(id);
-        if (temp == null) {
-            Bitmap bitmap = getPictureById(id);
-            if (bitmap == null) {
-                temp = getEditBitmap(mContext, 50, 50);
-            } else {
-                if (Config.DEFAULT_PICTURE_TEMP_DIR != null) {
-                    IOMethods.saveBitmap(bitmap, 50, Config.DEFAULT_PICTURE_TEMP_DIR + id);
-                    temp = getPictureTempById(id);
+        try {
+            // Get picture data to retrieve URI path
+            PictureData pictureData = new PictureData();
+            pictureData.setDataControl(id);
+            String uriPath = pictureData.getString(Config.DATA_PICTURE_URI_PATH, null);
+            
+            if (uriPath != null) {
+                android.util.Log.d("FloatPicture", "Loading preview bitmap from URI: " + uriPath + " for ID: " + id);
+                Uri uri = Uri.parse(uriPath);
+                Bitmap bitmap = getNewBitmap(mContext, uri);
+                if (bitmap != null) {
+                    // Create a smaller preview version
+                    float scale = Math.min(50.0f / bitmap.getWidth(), 50.0f / bitmap.getHeight());
+                    if (scale < 1.0f) {
+                        Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, 
+                            Math.round(bitmap.getWidth() * scale), 
+                            Math.round(bitmap.getHeight() * scale), true);
+                        bitmap.recycle();
+                        bitmap = scaledBitmap;
+                    }
+                    android.util.Log.d("FloatPicture", "Successfully created preview bitmap");
+                    return bitmap;
                 } else {
-                    temp = bitmap;
+                    android.util.Log.e("FloatPicture", "Failed to load preview bitmap from URI: " + uriPath);
                 }
-                if (bitmap != temp) {
-                    bitmap.recycle();
-                }
+            } else {
+                android.util.Log.e("FloatPicture", "No URI path found for preview of ID: " + id);
             }
+            
+            // Fallback to default placeholder
+            android.util.Log.d("FloatPicture", "Using default placeholder for preview");
+            return getEditBitmap(mContext, 50, 50);
+        } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "getPreviewBitmap: Exception occurred", e);
+            return getEditBitmap(mContext, 50, 50);
         }
-        return temp;
     }
 
     public static Bitmap getShowBitmap(Context mContext, String id) {
-        Config.initializePaths(mContext);
-        
-        Bitmap temp = getPictureById(id);
-        if (temp == null) {
-            Bitmap bitmap = getPictureTempById(id);
-            if (bitmap == null) {
-                temp = getEditBitmap(mContext, 50, 50);
+        try {
+            // Get picture data to retrieve URI path
+            PictureData pictureData = new PictureData();
+            pictureData.setDataControl(id);
+            String uriPath = pictureData.getString(Config.DATA_PICTURE_URI_PATH, null);
+            
+            if (uriPath != null) {
+                android.util.Log.d("FloatPicture", "Loading bitmap from URI: " + uriPath + " for ID: " + id);
+                Uri uri = Uri.parse(uriPath);
+                Bitmap bitmap = getNewBitmap(mContext, uri);
+                if (bitmap != null) {
+                    android.util.Log.d("FloatPicture", "Successfully loaded bitmap: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+                    return bitmap;
+                } else {
+                    android.util.Log.e("FloatPicture", "Failed to load bitmap from URI: " + uriPath);
+                }
             } else {
-                temp = getEditBitmap(mContext, bitmap);
-                bitmap.recycle();
+                android.util.Log.e("FloatPicture", "No URI path found for ID: " + id);
             }
+            
+            // Fallback to default placeholder
+            android.util.Log.d("FloatPicture", "Using default placeholder bitmap");
+            return getEditBitmap(mContext, 50, 50);
+        } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "getShowBitmap: Exception occurred", e);
+            return getEditBitmap(mContext, 50, 50);
         }
-        return temp;
     }
 
     public static boolean isPictureFileExist(String id) {
-        if (Config.DEFAULT_PICTURE_DIR == null) {
+        try {
+            // Get picture data to check if URI path exists
+            PictureData pictureData = new PictureData();
+            pictureData.setDataControl(id);
+            String uriPath = pictureData.getString(Config.DATA_PICTURE_URI_PATH, null);
+            
+            if (uriPath != null && !uriPath.isEmpty()) {
+                android.util.Log.d("FloatPicture", "Picture exists with URI: " + uriPath + " for ID: " + id);
+                return true;
+            } else {
+                android.util.Log.d("FloatPicture", "No URI path found for ID: " + id);
+                return false;
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "isPictureFileExist: Exception occurred", e);
             return false;
         }
-        File picture = new File(Config.DEFAULT_PICTURE_DIR + id);
-        return picture.exists();
     }
 
     public static void clearAllTemp(Context mContext, String id) {
+        // Unregister the view from MainApplication
         MainApplication mainApplication = (MainApplication) mContext.getApplicationContext();
         mainApplication.unregisterView(id);
         
-        if (Config.DEFAULT_PICTURE_DIR != null) {
-            File imageFile = new File(Config.DEFAULT_PICTURE_DIR + id);
-            if (imageFile.exists()) {
-                //noinspection ResultOfMethodCallIgnored
-                imageFile.delete();
-            }
-        }
-        
-        if (Config.DEFAULT_PICTURE_TEMP_DIR != null) {
-            File tempFile = new File(Config.DEFAULT_PICTURE_TEMP_DIR + id);
-            if (tempFile.exists()) {
-                //noinspection ResultOfMethodCallIgnored
-                tempFile.delete();
-            }
-        }
+        // No longer need to delete files since we're using URI-based storage
+        // The configuration data will be cleaned up by the caller if needed
+        android.util.Log.d("FloatPicture", "Cleared temporary data for ID: " + id);
     }
 }

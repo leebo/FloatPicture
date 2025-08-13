@@ -5,10 +5,9 @@
     tools:context=".Activities.PictureSettingsActivity">
 
     <item
-        android:id="@+id/menu_picture_settings_save"
-        android:icon="@drawable/ic_save"
-        android:orderInCategory="100"
+        android:id="@+id/action_save_new_picture"
         android:title="@string/save"
-        app:showAsAction="ifRoom" />
+        android:icon="@android:drawable/ic_menu_save"
+        app:showAsAction="always" />
 
 </menu>

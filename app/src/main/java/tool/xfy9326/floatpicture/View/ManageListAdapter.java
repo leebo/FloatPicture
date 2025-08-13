@@ -8,7 +8,6 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.app.AlertDialog;
 
 import java.util.ArrayList;
@@ -63,16 +62,31 @@ public class ManageListAdapter extends AdvancedRecyclerView.Adapter<ManageListVi
             holder.textView_Picture_Error.setVisibility(View.INVISIBLE);
         }
 
+        // Single click to activate this picture (only one can be active at a time)
         holder.imageView_Picture_Preview.setOnClickListener(v -> {
-            SwitchCompat switch_Picture_Show = holder.switch_Picture_Show;
-            boolean isChecked = !switch_Picture_Show.isChecked();
-            switch_Picture_Show.setChecked(isChecked);
-            ManageMethods.setWindowVisible(mActivity, pictureData, mPictureId, isChecked);
+            // Toggle activation for this image - activate this one and deactivate all others
+            ManageMethods.setWindowVisible(mActivity, pictureData, mPictureId, true);
+            // Update main activity's global toggle button state
+            if (mActivity instanceof MainActivity) {
+                ((MainActivity) mActivity).updateGlobalToggleButton();
+            }
+            // Refresh all items to show the updated active state
+            notifyDataSetChanged();
         });
 
-        SwitchCompat switch_Picture_Show = holder.switch_Picture_Show;
-        switch_Picture_Show.setChecked(pictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, Config.DATA_DEFAULT_PICTURE_SHOW_ENABLED));
-        switch_Picture_Show.setOnCheckedChangeListener((compoundButton, b) -> ManageMethods.setWindowVisible(mActivity, pictureData, mPictureId, b));
+        // Visual indication of active state - border and indicator
+        boolean isActive = pictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, Config.DATA_DEFAULT_PICTURE_SHOW_ENABLED);
+        if (isActive) {
+            // Active state: bright, with border and indicator
+            holder.imageView_Picture_Preview.setAlpha(1.0f);
+            holder.pictureFrame.setBackgroundResource(R.drawable.active_picture_border);
+            holder.activeIndicator.setVisibility(View.VISIBLE);
+        } else {
+            // Inactive state: dimmed, no border or indicator
+            holder.imageView_Picture_Preview.setAlpha(0.6f);
+            holder.pictureFrame.setBackground(null);
+            holder.activeIndicator.setVisibility(View.GONE);
+        }
 
         holder.imageView_Picture_Preview.setOnLongClickListener(v -> {
             AlertDialog.Builder builder = new AlertDialog.Builder(holder.itemView.getContext());
@@ -92,6 +106,10 @@ public class ManageListAdapter extends AdvancedRecyclerView.Adapter<ManageListVi
                     int position1 = holder.getAdapterPosition();
                     notifyItemRemoved(position1);
                     notifyItemRangeChanged(position1, getItemCount() - position1);
+                    // Update main activity's global toggle button state after deletion
+                    if (mActivity instanceof MainActivity) {
+                        ((MainActivity) mActivity).updateGlobalToggleButton();
+                    }
                     MainActivity.SnackShow(mActivity, R.string.action_delete_window);
                     ManageMethods.updateNotificationCount(mActivity);
                 }

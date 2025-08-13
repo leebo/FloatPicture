@@ -63,14 +63,12 @@ public class ManageMethods {
         float picture_alpha = pictureData.getFloat(Config.DATA_PICTURE_ALPHA, Config.DATA_DEFAULT_PICTURE_ALPHA);
         int position_x = pictureData.getInt(Config.DATA_PICTURE_POSITION_X, Config.DATA_DEFAULT_PICTURE_POSITION_X);
         int position_y = pictureData.getInt(Config.DATA_PICTURE_POSITION_Y, Config.DATA_DEFAULT_PICTURE_POSITION_Y);
-        boolean touch_and_move = pictureData.getBoolean(Config.DATA_PICTURE_TOUCH_AND_MOVE, Config.DATA_DEFAULT_PICTURE_TOUCH_AND_MOVE);
-        boolean over_layout = pictureData.getBoolean(Config.DATA_ALLOW_PICTURE_OVER_LAYOUT, Config.DATA_DEFAULT_ALLOW_PICTURE_OVER_LAYOUT);
-        FloatImageView floatImageView = ImageMethods.createPictureView(mContext, bitmap, touch_and_move, over_layout, zoom, picture_degree);
+        FloatImageView floatImageView = ImageMethods.createPictureView(mContext, bitmap, false, false, zoom, picture_degree);
         floatImageView.setAlpha(picture_alpha);
         floatImageView.updatePackageName(ApplicationMethods.getForegroundAppPackageName(mContext));
         ImageMethods.saveFloatImageViewById(mContext, id, floatImageView);
         if (pictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, Config.DATA_DEFAULT_PICTURE_SHOW_ENABLED)) {
-            WindowsMethods.createWindow(windowManager, floatImageView, touch_and_move, over_layout, position_x, position_y);
+            WindowsMethods.createWindow(windowManager, floatImageView, false, false, position_x, position_y);
         }
     }
 
@@ -143,41 +141,48 @@ public class ManageMethods {
 
     public static void setWindowVisible(Context context, PictureData pictureData, String id, boolean visible) {
         pictureData.setDataControl(id);
-        boolean data_visible = pictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, visible);
         if (visible) {
-            if (!data_visible) {
-                showWindowById(context, id);
-                pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, true);
-                pictureData.commit(null);
+            // Single active image design: First deactivate all other images
+            deactivateAllImages(context);
+            
+            // Then activate only this image
+            showWindowById(context, id);
+            pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, true);
+            pictureData.commit(null);
 
-                // Update global visibility state (Requirement 1)
-                PreferenceManager.getDefaultSharedPreferences(context).edit()
-                        .putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, true).apply();
-            }
-        } else { // If 'visible' is false, meaning we are trying to hide a window
-            if (data_visible) {
-                hideWindowById(context, id);
-                pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, false);
-                pictureData.commit(null);
+            // Update global visibility state
+            PreferenceManager.getDefaultSharedPreferences(context).edit()
+                    .putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, true).apply();
+                    
+            android.util.Log.d("FloatPicture", "Activated floating window for ID: " + id);
+        } else { // If 'visible' is false, meaning we are trying to hide the active window
+            hideWindowById(context, id);
+            pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, false);
+            pictureData.commit(null);
 
-                // Check if all windows are now hidden to update global visibility state (Requirement 1)
-                boolean anyWindowStillVisible = false;
-                LinkedHashMap<String, String> allPictures = pictureData.getListArray();
-                for (Map.Entry<String, String> entry : allPictures.entrySet()) {
-                    PictureData checkPictureData = new PictureData();
-                    checkPictureData.setDataControl(entry.getKey());
-                    if (checkPictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, false)) {
-                        anyWindowStillVisible = true;
-                        break;
-                    }
-                }
-                if (!anyWindowStillVisible) {
-                    PreferenceManager.getDefaultSharedPreferences(context).edit()
-                            .putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, false).apply();
-                }
-            }
+            // Update global visibility state to false since no image is active
+            PreferenceManager.getDefaultSharedPreferences(context).edit()
+                    .putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, false).apply();
+                    
+            android.util.Log.d("FloatPicture", "Deactivated floating window for ID: " + id);
         }
         updateToggleButtonIcon(context); // Always update toggle button icon after any visibility change
+    }
+    
+    // Helper method to deactivate all images (for single active image design)
+    private static void deactivateAllImages(Context context) {
+        PictureData tempPictureData = new PictureData();
+        LinkedHashMap<String, String> allPictures = tempPictureData.getListArray();
+        for (Map.Entry<String, String> entry : allPictures.entrySet()) {
+            String imageId = entry.getKey();
+            PictureData imagePictureData = new PictureData();
+            imagePictureData.setDataControl(imageId);
+            if (imagePictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, false)) {
+                hideWindowById(context, imageId);
+                imagePictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, false);
+                imagePictureData.commit(null);
+            }
+        }
     }
 
     private static void hideWindowById(Context mContext, String id) {
@@ -199,12 +204,21 @@ public class ManageMethods {
                 pictureData.setDataControl(id);
                 int positionX = pictureData.getInt(Config.DATA_PICTURE_POSITION_X, Config.DATA_DEFAULT_PICTURE_POSITION_X);
                 int positionY = pictureData.getInt(Config.DATA_PICTURE_POSITION_Y, Config.DATA_DEFAULT_PICTURE_POSITION_Y);
-                boolean touch_and_move = pictureData.getBoolean(Config.DATA_PICTURE_TOUCH_AND_MOVE, Config.DATA_DEFAULT_PICTURE_TOUCH_AND_MOVE);
-                boolean over_layout = pictureData.getBoolean(Config.DATA_ALLOW_PICTURE_OVER_LAYOUT, Config.DATA_DEFAULT_ALLOW_PICTURE_OVER_LAYOUT);
-                WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(mContext, positionX, positionY, touch_and_move, over_layout);
+                WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(mContext, positionX, positionY, false, false);
                 getWindowManager(mContext).addView(floatImageView, layoutParams);
             } catch (Exception e) {
                 e.printStackTrace();
+            }
+        }
+    }
+
+    public static void hideAllWindows(Context mContext) {
+        PictureData tempPictureData = new PictureData();
+        LinkedHashMap<String, String> allPictures = tempPictureData.getListArray();
+        if (allPictures != null) {
+            for (Map.Entry<String, String> entry : allPictures.entrySet()) {
+                String imageId = entry.getKey();
+                hideWindowById(mContext, imageId);
             }
         }
     }

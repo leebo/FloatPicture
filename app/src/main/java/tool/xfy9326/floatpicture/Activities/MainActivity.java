@@ -32,6 +32,7 @@ import tool.xfy9326.floatpicture.Methods.ManageMethods;
 import tool.xfy9326.floatpicture.Methods.PermissionMethods;
 import tool.xfy9326.floatpicture.R;
 import tool.xfy9326.floatpicture.Utils.Config;
+import tool.xfy9326.floatpicture.Utils.PictureData;
 import tool.xfy9326.floatpicture.View.AdvancedRecyclerView;
 import tool.xfy9326.floatpicture.View.ManageListAdapter;
 
@@ -41,8 +42,13 @@ import android.util.DisplayMetrics;
 import android.content.Context;
 import android.view.WindowManager;
 
+import com.google.android.material.button.MaterialButton;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 public class MainActivity extends AppCompatActivity {
     private ManageListAdapter manageListAdapter;
+    private MaterialButton globalToggleButton;
     private long BackClickTime;
 
     public static void SnackShow(Activity mActivity, int resourceId) {
@@ -71,6 +77,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        updateGlobalToggleButton();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
     }
@@ -89,6 +101,11 @@ public class MainActivity extends AppCompatActivity {
 
         FloatingActionButton floatingActionButton = findViewById(R.id.main_button_add);
         floatingActionButton.setOnClickListener(view -> ManageMethods.SelectPicture(MainActivity.this));
+
+        // Setup global toggle button
+        globalToggleButton = findViewById(R.id.button_global_toggle);
+        globalToggleButton.setOnClickListener(view -> toggleGlobalVisibility());
+        updateGlobalToggleButton();
 
         final DrawerLayout drawerLayout = findViewById(R.id.main_drawer_layout);
         ActionBarDrawerToggle actionBarDrawerToggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.open, R.string.close);
@@ -113,6 +130,73 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void toggleGlobalVisibility() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean currentState = preferences.getBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, Config.DATA_DEFAULT_GLOBAL_VISIBILITY);
+        boolean newState = !currentState;
+        
+        // Save new state
+        preferences.edit().putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, newState).apply();
+        
+        if (newState) {
+            // Show floating pictures - activate the currently selected one
+            String activeImageId = getActiveImageId();
+            if (activeImageId != null) {
+                PictureData pictureData = new PictureData();
+                pictureData.setDataControl(activeImageId);
+                ManageMethods.setWindowVisible(this, pictureData, activeImageId, true);
+            }
+        } else {
+            // Hide all floating pictures
+            ManageMethods.hideAllWindows(this);
+        }
+        
+        updateGlobalToggleButton();
+        manageListAdapter.updateData();
+        manageListAdapter.notifyDataSetChanged();
+    }
+    
+    private String getActiveImageId() {
+        PictureData tempPictureData = new PictureData();
+        LinkedHashMap<String, String> allPictures = tempPictureData.getListArray();
+        if (allPictures != null) {
+            for (Map.Entry<String, String> entry : allPictures.entrySet()) {
+                String imageId = entry.getKey();
+                PictureData imagePictureData = new PictureData();
+                imagePictureData.setDataControl(imageId);
+                if (imagePictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, false)) {
+                    return imageId;
+                }
+            }
+        }
+        return null;
+    }
+    
+    private boolean hasActiveImages() {
+        return getActiveImageId() != null;
+    }
+    
+    public void updateGlobalToggleButton() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean globalState = preferences.getBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, Config.DATA_DEFAULT_GLOBAL_VISIBILITY);
+        boolean hasActive = hasActiveImages();
+        
+        if (hasActive) {
+            globalToggleButton.setEnabled(true);
+            globalToggleButton.setAlpha(1.0f);
+            if (globalState) {
+                globalToggleButton.setIconResource(R.drawable.ic_visibility);
+            } else {
+                globalToggleButton.setIconResource(R.drawable.ic_visibility_off);
+            }
+        } else {
+            // No active images - button is disabled/grayed out
+            globalToggleButton.setEnabled(false);
+            globalToggleButton.setAlpha(0.5f);
+            globalToggleButton.setIconResource(R.drawable.ic_visibility_off);
+        }
+    }
+
     @SuppressLint("NotifyDataSetChanged")
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -126,6 +210,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 SnackShow(this, R.string.action_add_window);
                 ManageMethods.updateNotificationCount(this);
+                updateGlobalToggleButton();
             }
         } else if (requestCode == Config.REQUEST_CODE_ACTIVITY_PICTURE_SETTINGS_CHANGE) {
             if (data != null) {
@@ -133,6 +218,7 @@ public class MainActivity extends AppCompatActivity {
                 if (position >= 0) {
                     manageListAdapter.updateData();
                     manageListAdapter.notifyItemChanged(position);
+                    updateGlobalToggleButton();
                 }
             }
         } else if (requestCode == Config.REQUEST_CODE_ACTIVITY_PICTURE_SETTINGS_GET_PICTURE) {

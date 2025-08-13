@@ -25,26 +25,10 @@
         app:title="@string/settings_window">
         <Preference
             android:selectAllOnFocus="true"
-            app:dependency="settings_picture_touchable_and_moveable"
             app:iconSpaceReserved="false"
             app:key="settings_picture_position"
             app:singleLine="true"
             app:summary="@string/settings_picture_position_sum"
             app:title="@string/settings_picture_position" />
-        <CheckBoxPreference
-            android:selectAllOnFocus="true"
-            app:disableDependentsState="true"
-            app:iconSpaceReserved="false"
-            app:key="settings_picture_touchable_and_moveable"
-            app:singleLine="true"
-            app:summary="@string/settings_picture_touchable_and_moveable_sum"
-            app:title="@string/settings_picture_touchable_and_moveable" />
-        <CheckBoxPreference
-            android:selectAllOnFocus="true"
-            app:iconSpaceReserved="false"
-            app:key="settings_allow_picture_over_layout"
-            app:singleLine="true"
-            app:summary="@string/settings_allow_picture_over_layout_sum"
-            app:title="@string/settings_allow_picture_over_layout" />
     </PreferenceCategory>
 </PreferenceScreen>

@@ -68,17 +68,12 @@
     <string name="save_moved_position">Save moved position</string>
     <string name="notification_picture_count">%1$s picture window in total.</string>
     <string name="imageview_notification_visible">Set all picture visibility</string>
-    <string name="settings_picture_touchable_and_moveable">Touch and move the window</string>
-    <string name="settings_picture_touchable_and_moveable_sum">Open it and you can touch and move the picture.Use it carefully!</string>
-    <string name="settings_picture_touchable_and_moveable_warn">Please be sure that this picture window is not large and you can still control and close it!\n\nThe position you moved to in edit mode will be the default position of this window.</string>
     <string name="settings_global_show_notification_control">Show notification control board</string>
     <string name="settings_global_show_notification_control_sum">Can set windows\' visibility by this.</string>
     <string name="restart_to_apply_changes">Restart the application to apply this change!</string>
     <string name="loading">Loading &#8230; &#8230;</string>
     <string name="notification_channel">Default</string>
     <string name="notification_channel_des">Default Notification</string>
-    <string name="settings_allow_picture_over_layout">Allow picture over layout</string>
-    <string name="settings_allow_picture_over_layout_sum">Show picture out of current window</string>
     <string name="toggle_visibility">Toggle Floating Pictures Visibility</string>
     <string name="toggle_visibility_off">Floating Pictures are Hidden</string>
     <string name="screen_resolution_format">Resolution: %1$d x %2$d</string>
@@ -95,4 +90,5 @@
     <string name="permission_grant_all_required">Please grant all required permissions to enter the app.</string>
     <string name="transparency_format">Transparency: %1$d%%</string>
     <string name="zoom_format">Zoom: %1$d%%</string>
+    <string name="toggle_floating_pictures">Toggle Floating Pictures</string>
 </resources>
