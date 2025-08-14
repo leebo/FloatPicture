@@ -33,7 +33,7 @@ public class Config {
     public final static boolean DATA_DEFAULT_PICTURE_SHOW_ENABLED = true;
     public final static int DATA_DEFAULT_PICTURE_POSITION_X = 0;
     public final static int DATA_DEFAULT_PICTURE_POSITION_Y = 0;
-    public final static float DATA_DEFAULT_PICTURE_ALPHA = 0.5f;
+    public final static float DATA_DEFAULT_PICTURE_ALPHA = 0.5f;  // 50% transparency as default
     public final static float DATA_DEFAULT_PICTURE_DEGREE = 0f;
 
     public final static String PREFERENCE_PICTURE_NAME = "settings_picture_name";

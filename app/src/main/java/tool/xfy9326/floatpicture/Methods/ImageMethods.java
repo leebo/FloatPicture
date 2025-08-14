@@ -4,6 +4,7 @@ import static android.graphics.Bitmap.createBitmap;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -39,17 +40,40 @@ public class ImageMethods {
             String id = System.currentTimeMillis() + "-" + uri.toString().hashCode();
             android.util.Log.d("FloatPicture", "Generated picture ID: " + id + " for URI: " + uri);
             
-            // Test if we can load the bitmap from URI to validate it
-            Bitmap testBitmap = getNewBitmap(mContext, uri);
-            if (testBitmap == null) {
+            // Load bitmap from URI and save to internal storage
+            Bitmap bitmap = getNewBitmap(mContext, uri);
+            if (bitmap == null) {
                 android.util.Log.e("FloatPicture", "setNewImage: failed to load bitmap from uri");
                 return null;
             }
-            android.util.Log.d("FloatPicture", "Validated bitmap: " + testBitmap.getWidth() + "x" + testBitmap.getHeight());
-            testBitmap.recycle(); // Clean up test bitmap
+            android.util.Log.d("FloatPicture", "Loaded bitmap: " + bitmap.getWidth() + "x" + bitmap.getHeight());
             
-            android.util.Log.d("FloatPicture", "Image URI registered successfully with ID: " + id);
-            return id;
+            // Initialize paths
+            Config.initializePaths(mContext);
+            
+            // Save bitmap to internal storage files
+            String imagePath = Config.DEFAULT_PICTURE_DIR + id + ".webp";
+            String tempPath = Config.DEFAULT_PICTURE_TEMP_DIR + id + "_temp.webp";
+            
+            try {
+                // Create directories if they don't exist
+                File imageDir = new File(Config.DEFAULT_PICTURE_DIR);
+                File tempDir = new File(Config.DEFAULT_PICTURE_TEMP_DIR);
+                if (!imageDir.exists()) imageDir.mkdirs();
+                if (!tempDir.exists()) tempDir.mkdirs();
+                
+                // Save bitmap to files
+                IOMethods.saveBitmap(bitmap, 80, imagePath);
+                IOMethods.saveBitmap(bitmap, 80, tempPath);
+                
+                android.util.Log.d("FloatPicture", "Saved bitmap to: " + imagePath);
+                android.util.Log.d("FloatPicture", "Saved temp bitmap to: " + tempPath);
+                
+                return id;
+            } catch (Exception e) {
+                android.util.Log.e("FloatPicture", "Failed to save bitmap files", e);
+                return null;
+            }
         } catch (Exception e) {
             android.util.Log.e("FloatPicture", "setNewImage: Exception occurred", e);
             e.printStackTrace();
@@ -71,10 +95,71 @@ public class ImageMethods {
         FloatImageView imageView = new FloatImageView(mContext);
         imageView.setMoveable(touchable);
         imageView.setOverLayout(overLayout);
-        imageView.setImageBitmap(resizeBitmap(bitmap, zoom, degree));
+        
+        // Create fullscreen scaled bitmap that matches screen dimensions exactly
+        Bitmap fullscreenBitmap = createFullscreenBitmap(mContext, bitmap, degree);
+        imageView.setImageBitmap(fullscreenBitmap);
+        
+        // Use CENTER_CROP to fill the entire screen without black borders
+        imageView.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        
+        // Make the background transparent
         imageView.setBackgroundColor(mContext.getResources().getColor(android.R.color.transparent));
-        imageView.getBackground().setAlpha(0);
+        
+        android.util.Log.d("FloatPicture", "Created fullscreen image view with bitmap: " 
+            + fullscreenBitmap.getWidth() + "x" + fullscreenBitmap.getHeight());
+        
+        // Enable system UI hiding for fullscreen immersive experience
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+            imageView.setSystemUiVisibility(
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
+                | android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        }
+        
+        android.util.Log.d("FloatPicture", "Created FloatImageView with fullscreen system UI hiding");
         return imageView;
+    }
+    
+    // Create a bitmap scaled to exactly match screen dimensions for fullscreen display
+    private static Bitmap createFullscreenBitmap(Context mContext, Bitmap originalBitmap, float degree) {
+        try {
+            DisplayMetrics displayMetrics = mContext.getResources().getDisplayMetrics();
+            int screenWidth = displayMetrics.widthPixels;
+            int screenHeight = displayMetrics.heightPixels;
+            
+            android.util.Log.d("FloatPicture", "Screen dimensions: " + screenWidth + "x" + screenHeight);
+            android.util.Log.d("FloatPicture", "Original bitmap: " + originalBitmap.getWidth() + "x" + originalBitmap.getHeight());
+            
+            // First apply rotation if needed
+            Bitmap rotatedBitmap = originalBitmap;
+            if (degree != -1 && degree != 0) {
+                Matrix rotationMatrix = new Matrix();
+                rotationMatrix.postRotate(degree);
+                rotatedBitmap = Bitmap.createBitmap(originalBitmap, 0, 0, 
+                    originalBitmap.getWidth(), originalBitmap.getHeight(), rotationMatrix, true);
+                android.util.Log.d("FloatPicture", "Applied rotation: " + degree + " degrees");
+            }
+            
+            // Scale bitmap to exactly match screen dimensions (may change aspect ratio)
+            Bitmap scaledBitmap = Bitmap.createScaledBitmap(rotatedBitmap, screenWidth, screenHeight, true);
+            
+            // Clean up intermediate bitmap if rotation was applied
+            if (rotatedBitmap != originalBitmap) {
+                rotatedBitmap.recycle();
+            }
+            
+            android.util.Log.d("FloatPicture", "Created fullscreen bitmap: " 
+                + scaledBitmap.getWidth() + "x" + scaledBitmap.getHeight());
+            return scaledBitmap;
+            
+        } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "Error creating fullscreen bitmap", e);
+            return originalBitmap;
+        }
     }
 
     public static Bitmap getEditBitmap(Context mContext, Bitmap bitmap) {
@@ -108,11 +193,15 @@ public class ImageMethods {
         }
         
         synchronized (ImageMethods.class) {
-            Bitmap resized = createBitmap(bitmap, 0, 0, width, height, matrix, true);
-            if (resized != bitmap) {
-                bitmap.recycle();
+            try {
+                Bitmap resized = createBitmap(bitmap, 0, 0, width, height, matrix, true);
+                // Don't recycle the original bitmap automatically - let caller manage lifecycle
+                android.util.Log.d("FloatPicture", "Resized bitmap: " + width + "x" + height + " -> " + resized.getWidth() + "x" + resized.getHeight());
+                return resized;
+            } catch (Exception e) {
+                android.util.Log.e("FloatPicture", "Error resizing bitmap", e);
+                return bitmap; // Return original if resize fails
             }
-            return resized;
         }
     }
 
@@ -133,7 +222,8 @@ public class ImageMethods {
                     Matrix matrix = new Matrix();
                     matrix.postRotate(degree);
                     Bitmap rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-                    bitmap.recycle();
+                    // Don't recycle the original bitmap here - let it be managed properly
+                    // The rotated bitmap will be used and managed by the caller
                     bitmap = rotated;
                 }
             } catch (IOException e) {
@@ -170,18 +260,21 @@ public class ImageMethods {
 
     public static Bitmap getPreviewBitmap(Context mContext, String id) {
         try {
-            // Get picture data to retrieve URI path
-            PictureData pictureData = new PictureData();
-            pictureData.setDataControl(id);
-            String uriPath = pictureData.getString(Config.DATA_PICTURE_URI_PATH, null);
+            android.util.Log.d("FloatPicture", "getPreviewBitmap called for ID: " + id);
             
-            if (uriPath != null) {
-                android.util.Log.d("FloatPicture", "Loading preview bitmap from URI: " + uriPath + " for ID: " + id);
-                Uri uri = Uri.parse(uriPath);
-                Bitmap bitmap = getNewBitmap(mContext, uri);
+            // Initialize paths
+            Config.initializePaths(mContext);
+            
+            // Try loading from internal storage file  
+            String imagePath = Config.DEFAULT_PICTURE_DIR + id + ".webp";
+            File imageFile = new File(imagePath);
+            
+            if (imageFile.exists()) {
+                android.util.Log.d("FloatPicture", "Loading preview bitmap from file: " + imagePath);
+                Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
                 if (bitmap != null) {
                     // Create a smaller preview version
-                    float scale = Math.min(50.0f / bitmap.getWidth(), 50.0f / bitmap.getHeight());
+                    float scale = Math.min(100.0f / bitmap.getWidth(), 100.0f / bitmap.getHeight());
                     if (scale < 1.0f) {
                         Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, 
                             Math.round(bitmap.getWidth() * scale), 
@@ -192,65 +285,63 @@ public class ImageMethods {
                     android.util.Log.d("FloatPicture", "Successfully created preview bitmap");
                     return bitmap;
                 } else {
-                    android.util.Log.e("FloatPicture", "Failed to load preview bitmap from URI: " + uriPath);
+                    android.util.Log.e("FloatPicture", "Failed to decode preview bitmap from file: " + imagePath);
                 }
             } else {
-                android.util.Log.e("FloatPicture", "No URI path found for preview of ID: " + id);
+                android.util.Log.e("FloatPicture", "Preview image file does not exist: " + imagePath);
             }
             
             // Fallback to default placeholder
             android.util.Log.d("FloatPicture", "Using default placeholder for preview");
-            return getEditBitmap(mContext, 50, 50);
+            return getEditBitmap(mContext, 100, 100);
         } catch (Exception e) {
             android.util.Log.e("FloatPicture", "getPreviewBitmap: Exception occurred", e);
-            return getEditBitmap(mContext, 50, 50);
+            return getEditBitmap(mContext, 100, 100);
         }
     }
 
     public static Bitmap getShowBitmap(Context mContext, String id) {
         try {
-            // Get picture data to retrieve URI path
-            PictureData pictureData = new PictureData();
-            pictureData.setDataControl(id);
-            String uriPath = pictureData.getString(Config.DATA_PICTURE_URI_PATH, null);
+            android.util.Log.d("FloatPicture", "getShowBitmap called for ID: " + id);
             
-            if (uriPath != null) {
-                android.util.Log.d("FloatPicture", "Loading bitmap from URI: " + uriPath + " for ID: " + id);
-                Uri uri = Uri.parse(uriPath);
-                Bitmap bitmap = getNewBitmap(mContext, uri);
+            // Initialize paths
+            Config.initializePaths(mContext);
+            
+            // Try loading from internal storage file
+            String imagePath = Config.DEFAULT_PICTURE_DIR + id + ".webp";
+            File imageFile = new File(imagePath);
+            
+            if (imageFile.exists()) {
+                android.util.Log.d("FloatPicture", "Loading bitmap from file: " + imagePath);
+                Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
                 if (bitmap != null) {
-                    android.util.Log.d("FloatPicture", "Successfully loaded bitmap: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+                    android.util.Log.d("FloatPicture", "Successfully loaded bitmap from file: " + bitmap.getWidth() + "x" + bitmap.getHeight());
                     return bitmap;
                 } else {
-                    android.util.Log.e("FloatPicture", "Failed to load bitmap from URI: " + uriPath);
+                    android.util.Log.e("FloatPicture", "Failed to decode bitmap from file: " + imagePath);
                 }
             } else {
-                android.util.Log.e("FloatPicture", "No URI path found for ID: " + id);
+                android.util.Log.e("FloatPicture", "Image file does not exist: " + imagePath);
             }
             
             // Fallback to default placeholder
-            android.util.Log.d("FloatPicture", "Using default placeholder bitmap");
-            return getEditBitmap(mContext, 50, 50);
+            android.util.Log.e("FloatPicture", "Using default placeholder bitmap for ID: " + id);
+            return getEditBitmap(mContext, 100, 100);
         } catch (Exception e) {
-            android.util.Log.e("FloatPicture", "getShowBitmap: Exception occurred", e);
-            return getEditBitmap(mContext, 50, 50);
+            android.util.Log.e("FloatPicture", "getShowBitmap: Exception occurred for ID: " + id, e);
+            return getEditBitmap(mContext, 100, 100);
         }
     }
 
     public static boolean isPictureFileExist(String id) {
         try {
-            // Get picture data to check if URI path exists
-            PictureData pictureData = new PictureData();
-            pictureData.setDataControl(id);
-            String uriPath = pictureData.getString(Config.DATA_PICTURE_URI_PATH, null);
+            // Use static fallback if context not available for path initialization
+            String imagePath = (Config.DEFAULT_PICTURE_DIR != null ? Config.DEFAULT_PICTURE_DIR : "/data/user/0/tool.xfy9326.floatpicture/files/Pictures/") + id + ".webp";
+            File imageFile = new File(imagePath);
+            boolean exists = imageFile.exists();
             
-            if (uriPath != null && !uriPath.isEmpty()) {
-                android.util.Log.d("FloatPicture", "Picture exists with URI: " + uriPath + " for ID: " + id);
-                return true;
-            } else {
-                android.util.Log.d("FloatPicture", "No URI path found for ID: " + id);
-                return false;
-            }
+            android.util.Log.d("FloatPicture", "Picture file exists: " + exists + " for path: " + imagePath + " (ID: " + id + ")");
+            return exists;
         } catch (Exception e) {
             android.util.Log.e("FloatPicture", "isPictureFileExist: Exception occurred", e);
             return false;
@@ -262,8 +353,30 @@ public class ImageMethods {
         MainApplication mainApplication = (MainApplication) mContext.getApplicationContext();
         mainApplication.unregisterView(id);
         
-        // No longer need to delete files since we're using URI-based storage
-        // The configuration data will be cleaned up by the caller if needed
-        android.util.Log.d("FloatPicture", "Cleared temporary data for ID: " + id);
+        // Delete image files
+        try {
+            // Initialize paths
+            Config.initializePaths(mContext);
+            
+            String imagePath = Config.DEFAULT_PICTURE_DIR + id + ".webp";
+            String tempPath = Config.DEFAULT_PICTURE_TEMP_DIR + id + "_temp.webp";
+            
+            File imageFile = new File(imagePath);
+            File tempFile = new File(tempPath);
+            
+            if (imageFile.exists()) {
+                boolean deleted = imageFile.delete();
+                android.util.Log.d("FloatPicture", "Deleted image file: " + imagePath + " (success: " + deleted + ")");
+            }
+            
+            if (tempFile.exists()) {
+                boolean deleted = tempFile.delete();
+                android.util.Log.d("FloatPicture", "Deleted temp file: " + tempPath + " (success: " + deleted + ")");
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "Error deleting files for ID: " + id, e);
+        }
+        
+        android.util.Log.d("FloatPicture", "Cleared all data for ID: " + id);
     }
 }

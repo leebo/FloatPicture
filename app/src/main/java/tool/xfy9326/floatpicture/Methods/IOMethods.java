@@ -2,6 +2,7 @@ package tool.xfy9326.floatpicture.Methods;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -22,12 +23,59 @@ public class IOMethods {
 
     static Bitmap readImageByUri(Context context, Uri uri) {
         ContentResolver contentResolver = context.getContentResolver();
-        try (FileInputStream inputStream = Objects.requireNonNull(contentResolver.openAssetFileDescriptor(uri, "r")).createInputStream()) {
-            return BitmapFactory.decodeStream(inputStream);
+        try {
+            android.util.Log.d("FloatPicture", "Attempting to read image from URI: " + uri);
+            
+            // Try taking persistent permission if we don't have it
+            try {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                android.util.Log.d("FloatPicture", "Successfully took persistent URI permission for: " + uri);
+            } catch (SecurityException e) {
+                android.util.Log.w("FloatPicture", "Cannot take persistent URI permission (may already have it): " + uri);
+            }
+            
+            // Check if we have persistent permission and log all permissions
+            java.util.List<android.content.UriPermission> allPermissions = contentResolver.getPersistedUriPermissions();
+            android.util.Log.d("FloatPicture", "Total persisted URI permissions: " + allPermissions.size());
+            for (android.content.UriPermission permission : allPermissions) {
+                android.util.Log.d("FloatPicture", "Persisted permission: " + permission.getUri() + 
+                    " - Read: " + permission.isReadPermission() + 
+                    " - Write: " + permission.isWritePermission());
+            }
+            
+            boolean hasPermission = allPermissions.stream()
+                .anyMatch(uriPermission -> uriPermission.getUri().equals(uri) && uriPermission.isReadPermission());
+            
+            if (hasPermission) {
+                android.util.Log.d("FloatPicture", "Found persistent read permission for URI: " + uri);
+            } else {
+                android.util.Log.w("FloatPicture", "No persistent read permission found for URI: " + uri);
+                android.util.Log.w("FloatPicture", "Target URI: " + uri);
+                android.util.Log.w("FloatPicture", "Target URI string: " + uri.toString());
+            }
+            
+            // Try opening the URI
+            try (InputStream inputStream = contentResolver.openInputStream(uri)) {
+                if (inputStream == null) {
+                    android.util.Log.e("FloatPicture", "ContentResolver returned null input stream for URI: " + uri);
+                    return null;
+                }
+                
+                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                if (bitmap != null) {
+                    android.util.Log.d("FloatPicture", "Successfully decoded bitmap from URI: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+                } else {
+                    android.util.Log.e("FloatPicture", "BitmapFactory failed to decode stream for URI: " + uri);
+                }
+                return bitmap;
+            }
+        } catch (SecurityException e) {
+            android.util.Log.e("FloatPicture", "Security exception accessing URI: " + uri, e);
         } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "Exception reading image from URI: " + uri, e);
             e.printStackTrace();
-            return null;
         }
+        return null;
     }
 
     @SuppressWarnings("SameParameterValue")
@@ -37,9 +85,13 @@ public class IOMethods {
             if (!CheckFile(file, true)) {
                 OutputStream outputStream = new FileOutputStream(file);
                 bitmap.compress(Bitmap.CompressFormat.WEBP, quality, outputStream);
-                bitmap.recycle();
+                outputStream.flush();
+                outputStream.close();
+                android.util.Log.d("FloatPicture", "Successfully saved bitmap to: " + path);
+                // Don't recycle the bitmap here - let the caller manage it
             }
         } catch (IOException e) {
+            android.util.Log.e("FloatPicture", "Error saving bitmap to: " + path, e);
             e.printStackTrace();
         }
     }

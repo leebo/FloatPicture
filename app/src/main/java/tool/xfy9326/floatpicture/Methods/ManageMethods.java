@@ -57,13 +57,12 @@ public class ManageMethods {
     private static void StartWin(Context mContext, WindowManager windowManager, PictureData pictureData, String id) {
         pictureData.setDataControl(id);
         Bitmap bitmap = ImageMethods.getShowBitmap(mContext, id);
-        float default_zoom = pictureData.getFloat(Config.DATA_PICTURE_DEFAULT_ZOOM, ImageMethods.getDefaultZoom(mContext, bitmap, true));
-        float zoom = pictureData.getFloat(Config.DATA_PICTURE_ZOOM, default_zoom);
+        // For fullscreen floating pictures, zoom is handled automatically by createPictureView
         float picture_degree = pictureData.getFloat(Config.DATA_PICTURE_DEGREE, Config.DATA_DEFAULT_PICTURE_DEGREE);
         float picture_alpha = pictureData.getFloat(Config.DATA_PICTURE_ALPHA, Config.DATA_DEFAULT_PICTURE_ALPHA);
         int position_x = pictureData.getInt(Config.DATA_PICTURE_POSITION_X, Config.DATA_DEFAULT_PICTURE_POSITION_X);
         int position_y = pictureData.getInt(Config.DATA_PICTURE_POSITION_Y, Config.DATA_DEFAULT_PICTURE_POSITION_Y);
-        FloatImageView floatImageView = ImageMethods.createPictureView(mContext, bitmap, false, false, zoom, picture_degree);
+        FloatImageView floatImageView = ImageMethods.createPictureView(mContext, bitmap, false, false, 1.0f, picture_degree);
         floatImageView.setAlpha(picture_alpha);
         floatImageView.updatePackageName(ApplicationMethods.getForegroundAppPackageName(mContext));
         ImageMethods.saveFloatImageViewById(mContext, id, floatImageView);
@@ -197,18 +196,52 @@ public class ManageMethods {
     }
 
     private static void showWindowById(Context mContext, String id) {
-        FloatImageView floatImageView = ImageMethods.getFloatImageViewById(mContext, id);
-        if (floatImageView != null && floatImageView.getParent() == null) {
-            try {
-                PictureData pictureData = new PictureData();
-                pictureData.setDataControl(id);
+        try {
+            // Get picture data first
+            PictureData pictureData = new PictureData();
+            pictureData.setDataControl(id);
+            
+            // Get or create FloatImageView for this ID
+            FloatImageView floatImageView = ImageMethods.getFloatImageViewById(mContext, id);
+            
+            if (floatImageView == null || floatImageView.getParent() != null) {
+                // Create new FloatImageView if it doesn't exist or is already attached
+                android.util.Log.d("FloatPicture", "Creating new FloatImageView for ID: " + id);
+                
+                // Load bitmap from file
+                android.graphics.Bitmap bitmap = ImageMethods.getShowBitmap(mContext, id);
+                if (bitmap == null) {
+                    android.util.Log.e("FloatPicture", "Failed to load bitmap for floating window ID: " + id);
+                    return;
+                }
+                
+                // Get picture settings (zoom is handled automatically for fullscreen)
+                float degree = pictureData.getFloat(Config.DATA_PICTURE_DEGREE, Config.DATA_DEFAULT_PICTURE_DEGREE);
+                float alpha = pictureData.getFloat(Config.DATA_PICTURE_ALPHA, Config.DATA_DEFAULT_PICTURE_ALPHA);
+                
+                // Create FloatImageView with automatic fullscreen scaling
+                floatImageView = ImageMethods.createPictureView(mContext, bitmap, false, false, 1.0f, degree);
+                floatImageView.setAlpha(alpha);
+                floatImageView.setPictureId(id);
+                
+                // Save for reuse
+                ImageMethods.saveFloatImageViewById(mContext, id, floatImageView);
+            }
+            
+            // Show the window if not already showing
+            if (floatImageView != null && floatImageView.getParent() == null) {
                 int positionX = pictureData.getInt(Config.DATA_PICTURE_POSITION_X, Config.DATA_DEFAULT_PICTURE_POSITION_X);
                 int positionY = pictureData.getInt(Config.DATA_PICTURE_POSITION_Y, Config.DATA_DEFAULT_PICTURE_POSITION_Y);
                 WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(mContext, positionX, positionY, false, false);
                 getWindowManager(mContext).addView(floatImageView, layoutParams);
-            } catch (Exception e) {
-                e.printStackTrace();
+                
+                android.util.Log.d("FloatPicture", "Successfully showed floating window for ID: " + id);
+            } else {
+                android.util.Log.w("FloatPicture", "FloatImageView is null or already has parent for ID: " + id);
             }
+        } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "Error showing window for ID: " + id, e);
+            e.printStackTrace();
         }
     }
 

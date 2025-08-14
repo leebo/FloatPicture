@@ -80,6 +80,10 @@ public class FloatImageView extends FrameLayout {
         imageView.setImageBitmap(bm);
     }
 
+    public void setScaleType(android.widget.ImageView.ScaleType scaleType) {
+        imageView.setScaleType(scaleType);
+    }
+
     public void updatePackageName(String packageName) {
         // Package name tracking removed to reduce memory usage
     }

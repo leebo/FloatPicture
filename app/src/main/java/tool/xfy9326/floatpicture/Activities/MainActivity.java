@@ -135,8 +135,7 @@ public class MainActivity extends AppCompatActivity {
         boolean currentState = preferences.getBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, Config.DATA_DEFAULT_GLOBAL_VISIBILITY);
         boolean newState = !currentState;
         
-        // Save new state
-        preferences.edit().putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, newState).apply();
+        android.util.Log.d("FloatPicture", "Toggling global visibility from " + currentState + " to " + newState);
         
         if (newState) {
             // Show floating pictures - activate the currently selected one
@@ -145,10 +144,16 @@ public class MainActivity extends AppCompatActivity {
                 PictureData pictureData = new PictureData();
                 pictureData.setDataControl(activeImageId);
                 ManageMethods.setWindowVisible(this, pictureData, activeImageId, true);
+                android.util.Log.d("FloatPicture", "Showing active image: " + activeImageId);
+            } else {
+                android.util.Log.w("FloatPicture", "No active image found to show");
             }
         } else {
             // Hide all floating pictures
             ManageMethods.hideAllWindows(this);
+            // Update global state after hiding
+            preferences.edit().putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, false).apply();
+            android.util.Log.d("FloatPicture", "Hiding all floating windows");
         }
         
         updateGlobalToggleButton();

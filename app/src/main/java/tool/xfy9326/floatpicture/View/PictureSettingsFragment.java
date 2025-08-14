@@ -122,7 +122,7 @@ public class PictureSettingsFragment extends Fragment {
                     picture_degree = pictureData.getFloat(Config.DATA_PICTURE_DEGREE, Config.DATA_DEFAULT_PICTURE_DEGREE);
                     picture_alpha = pictureData.getFloat(Config.DATA_PICTURE_ALPHA, Config.DATA_DEFAULT_PICTURE_ALPHA);
                     bitmap = ImageMethods.getShowBitmap(requireContext(), PictureId);
-                    default_zoom = ImageMethods.getDefaultZoom(requireContext(), bitmap, false);
+                    default_zoom = ImageMethods.getDefaultZoom(requireContext(), bitmap, true);  // Use max size for fullscreen floating pictures
                     zoom = pictureData.getFloat(Config.DATA_PICTURE_ZOOM, default_zoom);
                     floatImageView = ImageMethods.getFloatImageViewById(requireContext(), PictureId);
                     
@@ -137,6 +137,17 @@ public class PictureSettingsFragment extends Fragment {
                             requireActivity().finish();
                         });
                         return;
+                    }
+                    
+                    // Take persistent URI permission
+                    try {
+                        requireActivity().getContentResolver().takePersistableUriPermission(
+                            intent.getData(),
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        );
+                        android.util.Log.d("FloatPicture", "Took persistent URI permission for: " + intent.getData());
+                    } catch (SecurityException e) {
+                        android.util.Log.w("FloatPicture", "Failed to take persistent URI permission", e);
                     }
                     
                     PictureId = ImageMethods.setNewImage(getActivity(), intent.getData());
@@ -162,7 +173,7 @@ public class PictureSettingsFragment extends Fragment {
                         });
                         return;
                     }
-                    default_zoom = ImageMethods.getDefaultZoom(requireContext(), bitmap, false);
+                    default_zoom = ImageMethods.getDefaultZoom(requireContext(), bitmap, true);  // Use max size for fullscreen floating pictures
                     zoom = 1.0f;
                     
                     // Create FloatImageView on main thread
@@ -173,9 +184,11 @@ public class PictureSettingsFragment extends Fragment {
                         
                         // For new pictures, save initial configuration before showing
                         if (!Edit_Mode && PictureId != null) {
-                            // Save basic configuration first including URI path
+                            // First set data control for this specific picture
+                            pictureData.setDataControl(PictureId);
+                            
+                            // Save basic configuration (no URI path needed since files are saved)
                             pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, true);
-                            pictureData.put(Config.DATA_PICTURE_URI_PATH, intent.getData().toString());
                             pictureData.put(Config.DATA_PICTURE_ZOOM, zoom);
                             pictureData.put(Config.DATA_PICTURE_DEFAULT_ZOOM, default_zoom);
                             pictureData.put(Config.DATA_PICTURE_ALPHA, picture_alpha);
@@ -183,6 +196,8 @@ public class PictureSettingsFragment extends Fragment {
                             pictureData.put(Config.DATA_PICTURE_POSITION_Y, position_y);
                             pictureData.put(Config.DATA_PICTURE_DEGREE, picture_degree);
                             pictureData.commit(PictureName);
+                            
+                            android.util.Log.d("FloatPicture", "Saved picture configuration for ID: " + PictureId);
                             
                             // Now show the floating image
                             ManageMethods.showSingleFloatingImage(requireContext(), PictureId);
@@ -361,30 +376,36 @@ public class PictureSettingsFragment extends Fragment {
     }
 
     private void updateFloatingImageRealtime() {
-        if (floatImageView != null) {
-            floatImageView.setAlpha(picture_alpha);
-            floatImageView.setImageBitmap(ImageMethods.resizeBitmap(bitmap, zoom, picture_degree));
-            WindowsMethods.updateWindow(windowManager, floatImageView, bitmap, false, false, zoom, picture_degree, position_x, position_y);
+        try {
+            if (floatImageView != null && bitmap != null) {
+                floatImageView.setAlpha(picture_alpha);
+                floatImageView.setImageBitmap(ImageMethods.resizeBitmap(bitmap, zoom, picture_degree));
+                WindowsMethods.updateWindow(windowManager, floatImageView, bitmap, false, false, zoom, picture_degree, position_x, position_y);
+                android.util.Log.d("FloatPicture", "Updated floating image - alpha: " + picture_alpha + ", degree: " + picture_degree);
+            } else {
+                android.util.Log.w("FloatPicture", "Cannot update floating image - floatImageView: " + floatImageView + ", bitmap: " + bitmap);
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "Error updating floating image", e);
         }
     }
 
     private void autoSaveSettings() {
         // Auto-save all settings in real-time
         if (pictureData != null && PictureId != null) {
+            // Ensure we're controlling the correct picture data
+            pictureData.setDataControl(PictureId);
+            
             // For new pictures, set as active (single active design)
             // For edit mode, maintain current active state
             if (!Edit_Mode) {
                 pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, true);
-                // For new pictures, save URI path if available
-                Intent intent = Objects.requireNonNull(requireActivity().getIntent());
-                if (intent.getData() != null) {
-                    pictureData.put(Config.DATA_PICTURE_URI_PATH, intent.getData().toString());
-                }
+                android.util.Log.d("FloatPicture", "Auto-saved settings for new picture ID: " + PictureId);
             } else {
-                // For edit mode, preserve existing enabled state and URI path
+                // For edit mode, preserve existing enabled state
                 boolean currentState = pictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, Config.DATA_DEFAULT_PICTURE_SHOW_ENABLED);
                 pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, currentState);
-                // URI path should already be saved for existing pictures
+                android.util.Log.d("FloatPicture", "Auto-saved settings for existing picture ID: " + PictureId);
             }
             
             pictureData.put(Config.DATA_PICTURE_ZOOM, zoom);
@@ -681,23 +702,12 @@ public class PictureSettingsFragment extends Fragment {
     public void exit() {
         try {
             if (!Edit_Mode) {
-                if (floatImageView != null) {
-                    if (floatImageView.getParent() != null) {
-                        try {
-                            windowManager.removeView(floatImageView);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    if (bitmap != null && !bitmap.isRecycled()) {
-                        bitmap.recycle();
-                    }
-                    floatImageView = null;
-                }
-                if (PictureId != null && getActivity() != null) {
-                    ImageMethods.clearAllTemp(getActivity(), PictureId);
-                }
+                // For new pictures, don't clean up - the picture has been saved and should remain
+                android.util.Log.d("FloatPicture", "Exiting new picture mode - keeping saved picture with ID: " + PictureId);
+                // Don't recycle bitmap or clear temp data for new pictures
+                // The floating image should remain active
             } else {
+                // For edit mode, restore original settings
                 if (floatImageView != null && pictureData != null && bitmap != null && windowManager != null) {
                     float original_zoom = pictureData.getFloat(Config.DATA_PICTURE_ZOOM, zoom);
                     float original_alpha = pictureData.getFloat(Config.DATA_PICTURE_ALPHA, picture_alpha);
@@ -709,7 +719,7 @@ public class PictureSettingsFragment extends Fragment {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            android.util.Log.e("FloatPicture", "Error in exit()", e);
         }
     }
 
