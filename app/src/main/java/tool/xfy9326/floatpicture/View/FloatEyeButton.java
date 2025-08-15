@@ -35,6 +35,7 @@ public class FloatEyeButton extends ImageView {
     private float startX, startY;
     private float startRawX, startRawY;
     private float currentX, currentY;
+    private int initialX, initialY;
     
     // 双击检测相关
     private long lastClickTime = 0;
@@ -102,8 +103,8 @@ public class FloatEyeButton extends ImageView {
                 | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
                 | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH;
         
-        // 设置位置和大小
-        layoutParams.gravity = Gravity.START | Gravity.TOP;
+        // 设置位置和大小 - 使用左上角绝对定位
+        layoutParams.gravity = Gravity.TOP | Gravity.LEFT;
         layoutParams.x = (int) currentX;
         layoutParams.y = (int) currentY;
         layoutParams.width = 120; // 眼睛按钮大小
@@ -139,6 +140,9 @@ public class FloatEyeButton extends ImageView {
                         startY = event.getY();
                         startRawX = event.getRawX();
                         startRawY = event.getRawY();
+                        // 记录当前窗口位置
+                        initialX = layoutParams.x;
+                        initialY = layoutParams.y;
                         isMoving = false;
                         isLongPressed = false;
                         
@@ -161,12 +165,18 @@ public class FloatEyeButton extends ImageView {
                         if (isLongPressed || (deltaX > 20 || deltaY > 20)) {
                             isMoving = true;
                             
-                            // 更新位置
-                            currentX = event.getRawX() - startX;
-                            currentY = event.getRawY() - startY;
+                            // 正确计算位置：初始窗口位置 + 手指移动的偏移量
+                            float moveDeltaX = event.getRawX() - startRawX;
+                            float moveDeltaY = event.getRawY() - startRawY;
                             
-                            layoutParams.x = (int) currentX;
-                            layoutParams.y = (int) currentY;
+                            int newX = (int) (initialX + moveDeltaX);
+                            int newY = (int) (initialY + moveDeltaY);
+                            
+                            currentX = newX;
+                            currentY = newY;
+                            
+                            layoutParams.x = newX;
+                            layoutParams.y = newY;
                             
                             try {
                                 windowManager.updateViewLayout(FloatEyeButton.this, layoutParams);
