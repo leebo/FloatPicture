@@ -72,6 +72,7 @@ public class NotificationService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        currentInstance = this;
         if (notificationButtonBroadcastReceiver == null) {
             notificationButtonBroadcastReceiver = new NotificationButtonBroadcastReceiver();
             IntentFilter intentFilter = new IntentFilter();
@@ -106,6 +107,7 @@ public class NotificationService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        currentInstance = null;
         handler.removeCallbacks(updatePackageNameRunnable);
         
         // 隐藏浮动眼睛按钮
@@ -188,6 +190,16 @@ public class NotificationService extends Service {
                 builder_manage.setContent(remoteViews);
                 Objects.requireNonNull(notificationManager).notify(Config.NOTIFICATION_ID, builder_manage.build());
             }
+        }
+    }
+    
+    // Static reference to access eye button from other classes
+    private static NotificationService currentInstance;
+    
+    
+    public static void bringEyeButtonToFront() {
+        if (currentInstance != null && currentInstance.floatEyeButton != null) {
+            currentInstance.floatEyeButton.bringToFront();
         }
     }
 }

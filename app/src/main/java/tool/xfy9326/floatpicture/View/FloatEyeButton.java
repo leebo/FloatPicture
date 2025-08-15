@@ -83,16 +83,22 @@ public class FloatEyeButton extends ImageView {
     private void setupLayoutParams() {
         layoutParams = new WindowManager.LayoutParams();
         
-        // 设置窗口类型
+        // 设置窗口类型 - 使用最高层级确保显示在遮罩图片上方
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // For Android O+, use TYPE_APPLICATION_OVERLAY but with SYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS
             layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
         } else {
-            layoutParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
+            // For older versions, use TYPE_SYSTEM_ERROR which has highest priority
+            layoutParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ERROR;
         }
         
-        // 设置窗口标志 - 确保可以接收触摸事件
+        // 设置窗口标志 - 确保可以接收触摸事件并保持在最上层
         layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
+                | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR;
         
         // 设置位置和大小
         layoutParams.gravity = Gravity.START | Gravity.TOP;
@@ -102,10 +108,17 @@ public class FloatEyeButton extends ImageView {
         layoutParams.height = 120;
         layoutParams.format = PixelFormat.TRANSLUCENT;
         
-        // 设置窗口透明度
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            layoutParams.alpha = ((MainApplication) getContext().getApplicationContext()).getSafeWindowsAlpha();
+        // Force this window to be on the highest layer
+        layoutParams.flags |= WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
+        
+        // Add window level for higher z-order (Android API 30+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Use highest possible window level
+            layoutParams.preferredDisplayModeId = 0;
         }
+        
+        
+        // No alpha/transparency settings - always fully opaque
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -253,10 +266,27 @@ public class FloatEyeButton extends ImageView {
                 windowManager.addView(this, layoutParams);
                 Log.d(TAG, "FloatEyeButton successfully added to window manager");
             } else {
-                Log.d(TAG, "FloatEyeButton already has a parent, not adding to window manager");
+                Log.d(TAG, "FloatEyeButton already has a parent, attempting to bring to front");
+                // Eye button is already added, bring it to front
+                bringToFront();
             }
         } catch (Exception e) {
             Log.e(TAG, "Error adding FloatEyeButton to window manager", e);
+            e.printStackTrace();
+        }
+    }
+    
+    public void bringToFront() {
+        try {
+            if (getParent() != null) {
+                Log.d(TAG, "Bringing FloatEyeButton to front by updating layout");
+                // Update the layout to bring the window to front
+                windowManager.updateViewLayout(this, layoutParams);
+                // Also call the view's bringToFront() method
+                super.bringToFront();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error bringing FloatEyeButton to front", e);
             e.printStackTrace();
         }
     }

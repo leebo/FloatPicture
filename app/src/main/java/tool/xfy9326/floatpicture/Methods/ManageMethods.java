@@ -57,17 +57,14 @@ public class ManageMethods {
     private static void StartWin(Context mContext, WindowManager windowManager, PictureData pictureData, String id) {
         pictureData.setDataControl(id);
         Bitmap bitmap = ImageMethods.getShowBitmap(mContext, id);
-        // For fullscreen floating pictures, zoom is handled automatically by createPictureView
+        // For fullscreen floating pictures, position is fixed and zoom is handled automatically
         float picture_degree = pictureData.getFloat(Config.DATA_PICTURE_DEGREE, Config.DATA_DEFAULT_PICTURE_DEGREE);
-        float picture_alpha = pictureData.getFloat(Config.DATA_PICTURE_ALPHA, Config.DATA_DEFAULT_PICTURE_ALPHA);
-        int position_x = pictureData.getInt(Config.DATA_PICTURE_POSITION_X, Config.DATA_DEFAULT_PICTURE_POSITION_X);
-        int position_y = pictureData.getInt(Config.DATA_PICTURE_POSITION_Y, Config.DATA_DEFAULT_PICTURE_POSITION_Y);
         FloatImageView floatImageView = ImageMethods.createPictureView(mContext, bitmap, false, false, 1.0f, picture_degree);
-        floatImageView.setAlpha(picture_alpha);
+        // No alpha settings - always fully opaque
         floatImageView.updatePackageName(ApplicationMethods.getForegroundAppPackageName(mContext));
         ImageMethods.saveFloatImageViewById(mContext, id, floatImageView);
         if (pictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, Config.DATA_DEFAULT_PICTURE_SHOW_ENABLED)) {
-            WindowsMethods.createWindow(windowManager, floatImageView, false, false, position_x, position_y);
+            WindowsMethods.createWindow(windowManager, floatImageView, false, false);
         }
     }
 
@@ -217,11 +214,9 @@ public class ManageMethods {
                 
                 // Get picture settings (zoom is handled automatically for fullscreen)
                 float degree = pictureData.getFloat(Config.DATA_PICTURE_DEGREE, Config.DATA_DEFAULT_PICTURE_DEGREE);
-                float alpha = pictureData.getFloat(Config.DATA_PICTURE_ALPHA, Config.DATA_DEFAULT_PICTURE_ALPHA);
                 
-                // Create FloatImageView with automatic fullscreen scaling
+                // Create FloatImageView with automatic fullscreen scaling - no alpha settings
                 floatImageView = ImageMethods.createPictureView(mContext, bitmap, false, false, 1.0f, degree);
-                floatImageView.setAlpha(alpha);
                 floatImageView.setPictureId(id);
                 
                 // Save for reuse
@@ -230,10 +225,15 @@ public class ManageMethods {
             
             // Show the window if not already showing
             if (floatImageView != null && floatImageView.getParent() == null) {
-                int positionX = pictureData.getInt(Config.DATA_PICTURE_POSITION_X, Config.DATA_DEFAULT_PICTURE_POSITION_X);
-                int positionY = pictureData.getInt(Config.DATA_PICTURE_POSITION_Y, Config.DATA_DEFAULT_PICTURE_POSITION_Y);
-                WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(mContext, positionX, positionY, false, false);
+                WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(mContext, false, false);
                 getWindowManager(mContext).addView(floatImageView, layoutParams);
+                
+                // Ensure eye button stays on top after showing mask image
+                try {
+                    tool.xfy9326.floatpicture.Services.NotificationService.bringEyeButtonToFront();
+                } catch (Exception e) {
+                    android.util.Log.w("FloatPicture", "Could not bring eye button to front: " + e.getMessage());
+                }
                 
                 android.util.Log.d("FloatPicture", "Successfully showed floating window for ID: " + id);
             } else {
@@ -270,16 +270,7 @@ public class ManageMethods {
             });
 
             WindowManager windowManager = getWindowManager(context);
-            WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(
-                    context,
-                    0,
-                    0,
-                    true,
-                    false
-            );
-            layoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
-            layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
-            layoutParams.gravity = Gravity.BOTTOM | Gravity.END;
+            WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(context, true, false, true);
             layoutParams.x = (int) context.getResources().getDimension(R.dimen.fab_margin);
             layoutParams.y = (int) context.getResources().getDimension(R.dimen.fab_margin);
 

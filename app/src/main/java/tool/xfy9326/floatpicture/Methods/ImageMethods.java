@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
+import android.graphics.Paint;
 import android.net.Uri;
 import android.util.DisplayMetrics;
 
@@ -93,18 +94,18 @@ public class ImageMethods {
 
     public static FloatImageView createPictureView(Context mContext, Bitmap bitmap, boolean touchable, boolean overLayout, float zoom, float degree) {
         FloatImageView imageView = new FloatImageView(mContext);
-        imageView.setMoveable(touchable);
+        // setMoveable removed - fullscreen pictures don't need positioning
         imageView.setOverLayout(overLayout);
         
         // Create fullscreen scaled bitmap that matches screen dimensions exactly
         Bitmap fullscreenBitmap = createFullscreenBitmap(mContext, bitmap, degree);
         imageView.setImageBitmap(fullscreenBitmap);
         
-        // Use CENTER_CROP to fill the entire screen without black borders
-        imageView.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        // Use FIT_XY to scale image to fill exactly
+        imageView.setScaleType(android.widget.ImageView.ScaleType.FIT_XY);
         
-        // Make the background transparent
-        imageView.setBackgroundColor(mContext.getResources().getColor(android.R.color.transparent));
+        // Make the background black to ensure image is visible (no transparency)
+        imageView.setBackgroundColor(0xFF000000);
         
         android.util.Log.d("FloatPicture", "Created fullscreen image view with bitmap: " 
             + fullscreenBitmap.getWidth() + "x" + fullscreenBitmap.getHeight());
@@ -144,17 +145,29 @@ public class ImageMethods {
                 android.util.Log.d("FloatPicture", "Applied rotation: " + degree + " degrees");
             }
             
-            // Scale bitmap to exactly match screen dimensions (may change aspect ratio)
-            Bitmap scaledBitmap = Bitmap.createScaledBitmap(rotatedBitmap, screenWidth, screenHeight, true);
+            // Create opaque bitmap with black background - no transparency allowed
+            Bitmap opaqueBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.RGB_565);  // RGB_565 has no alpha channel
+            Canvas canvas = new Canvas(opaqueBitmap);
+            
+            // Fill with black background to ensure no transparency
+            canvas.drawColor(0xFF000000);  // Solid black background
+            
+            // Draw the rotated bitmap scaled to fill the screen
+            android.graphics.Rect srcRect = new android.graphics.Rect(0, 0, rotatedBitmap.getWidth(), rotatedBitmap.getHeight());
+            android.graphics.Rect dstRect = new android.graphics.Rect(0, 0, screenWidth, screenHeight);
+            
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            paint.setFilterBitmap(true);
+            canvas.drawBitmap(rotatedBitmap, srcRect, dstRect, paint);
             
             // Clean up intermediate bitmap if rotation was applied
             if (rotatedBitmap != originalBitmap) {
                 rotatedBitmap.recycle();
             }
             
-            android.util.Log.d("FloatPicture", "Created fullscreen bitmap: " 
-                + scaledBitmap.getWidth() + "x" + scaledBitmap.getHeight());
-            return scaledBitmap;
+            android.util.Log.d("FloatPicture", "Created opaque fullscreen bitmap: " 
+                + opaqueBitmap.getWidth() + "x" + opaqueBitmap.getHeight());
+            return opaqueBitmap;
             
         } catch (Exception e) {
             android.util.Log.e("FloatPicture", "Error creating fullscreen bitmap", e);

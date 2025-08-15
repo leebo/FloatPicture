@@ -58,8 +58,6 @@ public class PictureSettingsFragment extends Fragment {
     private float zoom_temp;
     private float picture_degree;
     private float picture_degree_temp;
-    private float picture_alpha;
-    private float picture_alpha_temp;
     private int position_x;
     private int position_y;
     private int position_x_temp;
@@ -120,7 +118,6 @@ public class PictureSettingsFragment extends Fragment {
                     position_x = pictureData.getInt(Config.DATA_PICTURE_POSITION_X, Config.DATA_DEFAULT_PICTURE_POSITION_X);
                     position_y = pictureData.getInt(Config.DATA_PICTURE_POSITION_Y, Config.DATA_DEFAULT_PICTURE_POSITION_Y);
                     picture_degree = pictureData.getFloat(Config.DATA_PICTURE_DEGREE, Config.DATA_DEFAULT_PICTURE_DEGREE);
-                    picture_alpha = pictureData.getFloat(Config.DATA_PICTURE_ALPHA, Config.DATA_DEFAULT_PICTURE_ALPHA);
                     bitmap = ImageMethods.getShowBitmap(requireContext(), PictureId);
                     default_zoom = ImageMethods.getDefaultZoom(requireContext(), bitmap, true);  // Use max size for fullscreen floating pictures
                     zoom = pictureData.getFloat(Config.DATA_PICTURE_ZOOM, default_zoom);
@@ -163,7 +160,6 @@ public class PictureSettingsFragment extends Fragment {
                     PictureName = getString(R.string.new_picture_name);
                     position_x = Config.DATA_DEFAULT_PICTURE_POSITION_X;
                     position_y = Config.DATA_DEFAULT_PICTURE_POSITION_Y;
-                    picture_alpha = Config.DATA_DEFAULT_PICTURE_ALPHA;
                     picture_degree = Config.DATA_DEFAULT_PICTURE_DEGREE;
                     bitmap = ImageMethods.getShowBitmap(requireContext(), PictureId);
                     if (bitmap == null) {
@@ -179,7 +175,7 @@ public class PictureSettingsFragment extends Fragment {
                     // Create FloatImageView on main thread
                     requireActivity().runOnUiThread(() -> {
                         floatImageView = ImageMethods.createPictureView(requireContext(), bitmap, false, false, zoom, picture_degree);
-                        floatImageView.setAlpha(picture_alpha);
+                        // No alpha settings - always fully opaque
                         floatImageView.setPictureId(PictureId);
                         
                         // For new pictures, save initial configuration before showing
@@ -191,7 +187,6 @@ public class PictureSettingsFragment extends Fragment {
                             pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, true);
                             pictureData.put(Config.DATA_PICTURE_ZOOM, zoom);
                             pictureData.put(Config.DATA_PICTURE_DEFAULT_ZOOM, default_zoom);
-                            pictureData.put(Config.DATA_PICTURE_ALPHA, picture_alpha);
                             pictureData.put(Config.DATA_PICTURE_POSITION_X, position_x);
                             pictureData.put(Config.DATA_PICTURE_POSITION_Y, position_y);
                             pictureData.put(Config.DATA_PICTURE_DEGREE, picture_degree);
@@ -211,29 +206,6 @@ public class PictureSettingsFragment extends Fragment {
     }
 
     private void setupRealtimeControls(View view) {
-        // Alpha control
-        SeekBar alphaSeekBar = view.findViewById(R.id.seekbar_alpha_realtime);
-        TextView alphaValueText = view.findViewById(R.id.textview_alpha_value_realtime);
-        int currentAlphaPercentage = (int) (picture_alpha * 100);
-        alphaSeekBar.setProgress(currentAlphaPercentage);
-        alphaValueText.setText(currentAlphaPercentage + "%");
-        alphaSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    picture_alpha = (float) progress / 100.0f;
-                    alphaValueText.setText(progress + "%");
-                    updateFloatingImageRealtime();
-                }
-            }
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                autoSaveSettings();
-            }
-        });
-
         // Degree control
         RadioGroup degreeRadioGroup = view.findViewById(R.id.radio_group_degree_realtime);
         if (picture_degree == 0) {
@@ -258,130 +230,16 @@ public class PictureSettingsFragment extends Fragment {
             updateFloatingImageRealtime();
             autoSaveSettings();
         });
-
-        // Position controls
-        setupPositionControls(view);
     }
 
-    private void setupPositionControls(View view) {
-        SeekBar positionXSeekBar = view.findViewById(R.id.seekbar_position_x_realtime);
-        SeekBar positionYSeekBar = view.findViewById(R.id.seekbar_position_y_realtime);
-        EditText positionXEdit = view.findViewById(R.id.edittext_position_x_realtime);
-        EditText positionYEdit = view.findViewById(R.id.edittext_position_y_realtime);
-
-        Point size = new Point();
-        requireActivity().getWindowManager().getDefaultDisplay().getSize(size);
-        final int maxX = size.x;
-        final int maxY = size.y;
-
-        // Setup seekbars
-        positionXSeekBar.setMax(maxX);
-        positionYSeekBar.setMax(maxY);
-        positionXSeekBar.setProgress(Math.max(0, Math.min(position_x, maxX)));
-        positionYSeekBar.setProgress(Math.max(0, Math.min(position_y, maxY)));
-        positionXEdit.setText(String.valueOf(position_x));
-        positionYEdit.setText(String.valueOf(position_y));
-
-        // Position X controls
-        positionXSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    position_x = progress;
-                    positionXEdit.setText(String.valueOf(progress));
-                    updateFloatingImageRealtime();
-                }
-            }
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                autoSaveSettings();
-            }
-        });
-
-        positionXEdit.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                try {
-                    int value = Integer.parseInt(s.toString());
-                    if (value >= 0 && value <= maxX) {
-                        position_x = value;
-                        positionXSeekBar.setProgress(value);
-                        updateFloatingImageRealtime();
-                        autoSaveSettings();
-                    }
-                } catch (NumberFormatException e) {
-                    // Ignore invalid input
-                }
-            }
-        });
-
-        // Position Y controls
-        positionYSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    position_y = progress;
-                    positionYEdit.setText(String.valueOf(progress));
-                    updateFloatingImageRealtime();
-                }
-            }
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                autoSaveSettings();
-            }
-        });
-
-        positionYEdit.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override
-            public void afterTextChanged(Editable s) {
-                try {
-                    int value = Integer.parseInt(s.toString());
-                    if (value >= 0 && value <= maxY) {
-                        position_y = value;
-                        positionYSeekBar.setProgress(value);
-                        updateFloatingImageRealtime();
-                        autoSaveSettings();
-                    }
-                } catch (NumberFormatException e) {
-                    // Ignore invalid input
-                }
-            }
-        });
-
-        updatePositionControlsVisibility(view);
-    }
-
-    private void updatePositionControlsVisibility(View view) {
-        SeekBar positionXSeekBar = view.findViewById(R.id.seekbar_position_x_realtime);
-        SeekBar positionYSeekBar = view.findViewById(R.id.seekbar_position_y_realtime);
-        EditText positionXEdit = view.findViewById(R.id.edittext_position_x_realtime);
-        EditText positionYEdit = view.findViewById(R.id.edittext_position_y_realtime);
-
-        positionXSeekBar.setEnabled(true);
-        positionYSeekBar.setEnabled(true);
-        positionXEdit.setInputType(InputType.TYPE_CLASS_NUMBER);
-        positionYEdit.setInputType(InputType.TYPE_CLASS_NUMBER);
-    }
 
     private void updateFloatingImageRealtime() {
         try {
             if (floatImageView != null && bitmap != null) {
-                floatImageView.setAlpha(picture_alpha);
+                floatImageView.setAlpha(1.0f);  // Always fully opaque
                 floatImageView.setImageBitmap(ImageMethods.resizeBitmap(bitmap, zoom, picture_degree));
-                WindowsMethods.updateWindow(windowManager, floatImageView, bitmap, false, false, zoom, picture_degree, position_x, position_y);
-                android.util.Log.d("FloatPicture", "Updated floating image - alpha: " + picture_alpha + ", degree: " + picture_degree);
+                WindowsMethods.updateWindow(windowManager, floatImageView, bitmap, false, false, zoom, picture_degree);
+                android.util.Log.d("FloatPicture", "Updated floating image - degree: " + picture_degree);
             } else {
                 android.util.Log.w("FloatPicture", "Cannot update floating image - floatImageView: " + floatImageView + ", bitmap: " + bitmap);
             }
@@ -410,9 +268,8 @@ public class PictureSettingsFragment extends Fragment {
             
             pictureData.put(Config.DATA_PICTURE_ZOOM, zoom);
             pictureData.put(Config.DATA_PICTURE_DEFAULT_ZOOM, default_zoom);
-            pictureData.put(Config.DATA_PICTURE_ALPHA, picture_alpha);
-            pictureData.put(Config.DATA_PICTURE_POSITION_X, position_x);
-            pictureData.put(Config.DATA_PICTURE_POSITION_Y, position_y);
+            pictureData.put(Config.DATA_PICTURE_POSITION_X, Config.DATA_DEFAULT_PICTURE_POSITION_X);  // Fixed position
+            pictureData.put(Config.DATA_PICTURE_POSITION_Y, Config.DATA_DEFAULT_PICTURE_POSITION_Y);  // Fixed position
             pictureData.put(Config.DATA_PICTURE_DEGREE, picture_degree);
             pictureData.commit(PictureName);
             ImageMethods.saveFloatImageViewById(requireActivity(), PictureId, floatImageView);
@@ -459,7 +316,7 @@ public class PictureSettingsFragment extends Fragment {
             } else if (checkedId == R.id.radio_270_degree) {
                 picture_degree_temp = 270;
             }
-            WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, false, false, zoom, picture_degree_temp, position_x, position_y);
+            WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, false, false, zoom, picture_degree_temp);
         });
 
         dialog.setPositiveButton(R.string.done, (__, which) -> {
@@ -473,159 +330,7 @@ public class PictureSettingsFragment extends Fragment {
 
     
 
-    private void setPictureAlpha() {
-        bitmap_Edit = ImageMethods.getEditBitmap(getActivity(), bitmap);
-        floatImageView_Edit = ImageMethods.createPictureView(getActivity(), bitmap_Edit, false, false, zoom, picture_degree);
-        onEditPicture(floatImageView_Edit);
 
-        View mView = inflater.inflate(R.layout.dialog_set_alpha, requireActivity().findViewById(R.id.layout_dialog_set_alpha));
-        AlertDialog.Builder dialog = new AlertDialog.Builder(requireContext());
-        dialog.setTitle(R.string.settings_picture_alpha);
-        dialog.setCancelable(false);
-
-        TextView tvAlphaValue = mView.findViewById(R.id.textview_alpha_value);
-        SeekBar seekBarAlpha = mView.findViewById(R.id.seekbar_alpha);
-
-        // Convert alpha (0.0-1.0) to percentage (0-100)
-        int currentAlphaPercentage = (int) (picture_alpha * 100);
-        tvAlphaValue.setText(getString(R.string.transparency_format, currentAlphaPercentage));
-        seekBarAlpha.setProgress(currentAlphaPercentage);
-        picture_alpha_temp = picture_alpha; // Initialize temp with current value
-
-        seekBarAlpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                picture_alpha_temp = (float) progress / 100.0f;
-                tvAlphaValue.setText(getString(R.string.transparency_format, progress));
-                floatImageView_Edit.setAlpha(picture_alpha_temp);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
-
-        dialog.setPositiveButton(R.string.done, (__, which) -> {
-            picture_alpha = picture_alpha_temp;
-            onSuccessEditPicture(floatImageView_Edit, bitmap_Edit);
-        });
-        dialog.setNegativeButton(R.string.cancel, (__, which) -> onFailedEditPicture(floatImageView_Edit, bitmap_Edit));
-        dialog.setView(mView);
-        dialog.show();
-    }
-
-    private void setPicturePosition() {
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext());
-        final boolean touchable_edit = sharedPreferences.getBoolean(Config.PREFERENCE_TOUCHABLE_POSITION_EDIT, false);
-        bitmap_Edit = ImageMethods.getEditBitmap(getActivity(), bitmap);
-        floatImageView_Edit = ImageMethods.createPictureView(getActivity(), bitmap_Edit, touchable_edit, false, zoom, picture_degree);
-        onEditPicture(floatImageView_Edit);
-        if (touchable_edit) {
-            WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, true, false, zoom, picture_degree, position_x, position_y);
-        }
-
-        View mView = inflater.inflate(R.layout.dialog_set_position, requireActivity().findViewById(R.id.layout_dialog_set_position));
-        AlertDialog.Builder dialog = new AlertDialog.Builder(requireContext());
-        dialog.setTitle(R.string.settings_picture_position);
-        dialog.setCancelable(false);
-        Point size = new Point();
-        requireActivity().getWindowManager().getDefaultDisplay().getSize(size);
-        final int Max_X = size.x;
-        final int Max_Y = size.y;
-        final SeekBar seekBar_x = mView.findViewById(R.id.seekbar_set_position_x);
-        seekBar_x.setMax(Max_X);
-        seekBar_x.setProgress(Math.max(0, Math.min(position_x, Max_X)));
-        final EditText editText_x = mView.findViewById(R.id.edittext_set_position_x);
-        editText_x.setText(String.valueOf(position_x));
-        final SeekBar seekBar_y = mView.findViewById(R.id.seekbar_set_position_y);
-        seekBar_y.setMax(Max_Y);
-        seekBar_y.setProgress(Math.max(0, Math.min(position_y, Max_Y)));
-        final EditText editText_y = mView.findViewById(R.id.edittext_set_position_y);
-        editText_y.setText(String.valueOf(position_y));
-        position_x_temp = position_x;
-        position_y_temp = position_y;
-        seekBar_x.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                position_x_temp = progress;
-                editText_x.setText(String.valueOf(progress));
-                WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, touchable_edit, false, zoom, picture_degree, position_x_temp, position_y_temp);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
-        editText_x.setOnEditorActionListener((v, actionId, event) -> {
-            try {
-                int edittext_temp = Integer.parseInt(v.getText().toString());
-                if (edittext_temp >= 0 && edittext_temp <= Max_X) {
-                    position_x_temp = edittext_temp;
-                    seekBar_x.setProgress(edittext_temp);
-                    WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, touchable_edit, false, zoom, picture_degree, position_x_temp, position_y_temp);
-                } else {
-                    Toast.makeText(getActivity(), R.string.settings_picture_position_warn, Toast.LENGTH_SHORT).show();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return false;
-        });
-        seekBar_y.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                position_y_temp = progress;
-                editText_y.setText(String.valueOf(progress));
-                WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, touchable_edit, false, zoom, picture_degree, position_x_temp, position_y_temp);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
-        editText_y.setOnEditorActionListener((v, actionId, event) -> {
-            try {
-                int edittext_temp = Integer.parseInt(v.getText().toString());
-                if (edittext_temp >= 0 && edittext_temp <= Max_Y) {
-                    position_y_temp = edittext_temp;
-                    seekBar_y.setProgress(edittext_temp);
-                    WindowsMethods.updateWindow(windowManager, floatImageView_Edit, bitmap_Edit, touchable_edit, false, zoom, picture_degree, position_x_temp, position_y_temp);
-                } else {
-                    Toast.makeText(getActivity(), R.string.settings_picture_position_warn, Toast.LENGTH_SHORT).show();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return false;
-        });
-        if (touchable_edit) {
-            dialog.setNeutralButton(R.string.save_moved_position, (dialog1, which) -> {
-                position_x = (int) floatImageView_Edit.getMovedPositionX();
-                position_y = (int) floatImageView_Edit.getMovedPositionY();
-                onSuccessEditPicture(floatImageView_Edit, bitmap_Edit);
-            });
-        }
-        dialog.setPositiveButton(R.string.done, (__, which) -> {
-            position_x = position_x_temp;
-            position_y = position_y_temp;
-            onSuccessEditPicture(floatImageView_Edit, bitmap_Edit);
-        });
-        dialog.setNegativeButton(R.string.cancel, (__, which) -> onFailedEditPicture(floatImageView_Edit, bitmap_Edit));
-        dialog.setView(mView);
-        dialog.show();
-    }
 
     private void onEditPicture(FloatImageView FloatImageView_Edit) {
         if (!onUseEditPicture) {
@@ -638,7 +343,7 @@ public class PictureSettingsFragment extends Fragment {
                     e.printStackTrace();
                 }
             }
-            WindowsMethods.createWindow(windowManager, FloatImageView_Edit, false, false, position_x, position_y);
+            WindowsMethods.createWindow(windowManager, FloatImageView_Edit, false, false);
             onUseEditPicture = true;
         }
     }
@@ -655,7 +360,7 @@ public class PictureSettingsFragment extends Fragment {
             }
             bitmap_Edit.recycle();
             floatImageView.setImageBitmap(ImageMethods.resizeBitmap(bitmap, zoom, picture_degree));
-            WindowsMethods.createWindow(windowManager, floatImageView, false, false, position_x, position_y);
+            WindowsMethods.createWindow(windowManager, floatImageView, false, false);
             onUseEditPicture = false;
         }
     }
@@ -671,7 +376,7 @@ public class PictureSettingsFragment extends Fragment {
                 }
             }
             bitmap_Edit.recycle();
-            WindowsMethods.createWindow(windowManager, floatImageView, false, false, position_x, position_y);
+            WindowsMethods.createWindow(windowManager, floatImageView, false, false);
             onUseEditPicture = false;
         }
     }
@@ -710,12 +415,11 @@ public class PictureSettingsFragment extends Fragment {
                 // For edit mode, restore original settings
                 if (floatImageView != null && pictureData != null && bitmap != null && windowManager != null) {
                     float original_zoom = pictureData.getFloat(Config.DATA_PICTURE_ZOOM, zoom);
-                    float original_alpha = pictureData.getFloat(Config.DATA_PICTURE_ALPHA, picture_alpha);
                     float original_degree = pictureData.getFloat(Config.DATA_PICTURE_DEGREE, picture_degree);
                     int original_position_x = pictureData.getInt(Config.DATA_PICTURE_POSITION_X, position_x);
                     int original_position_y = pictureData.getInt(Config.DATA_PICTURE_POSITION_Y, position_y);
-                    floatImageView.setAlpha(original_alpha);
-                    WindowsMethods.updateWindow(windowManager, floatImageView, bitmap, false, false, original_zoom, original_degree, original_position_x, original_position_y);
+                    // No alpha settings - always fully opaque
+                    WindowsMethods.updateWindow(windowManager, floatImageView, bitmap, false, false, original_zoom, original_degree);
                 }
             }
         } catch (Exception e) {

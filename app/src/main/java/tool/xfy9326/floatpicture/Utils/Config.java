@@ -27,18 +27,15 @@ public class Config {
     public final static String DATA_PICTURE_POSITION_Y = "POSITION_Y";
     public final static String DATA_PICTURE_ZOOM = "ZOOM";
     public final static String DATA_PICTURE_DEFAULT_ZOOM = "DEFAULT_ZOOM";
-    public final static String DATA_PICTURE_ALPHA = "ALPHA";
     public final static String DATA_PICTURE_DEGREE = "DEGREE";
 
     public final static boolean DATA_DEFAULT_PICTURE_SHOW_ENABLED = true;
     public final static int DATA_DEFAULT_PICTURE_POSITION_X = 0;
     public final static int DATA_DEFAULT_PICTURE_POSITION_Y = 0;
-    public final static float DATA_DEFAULT_PICTURE_ALPHA = 0.5f;  // 50% transparency as default
     public final static float DATA_DEFAULT_PICTURE_DEGREE = 0f;
 
     public final static String PREFERENCE_PICTURE_NAME = "settings_picture_name";
     public final static String PREFERENCE_PICTURE_RESIZE = "settings_picture_resize";
-    public final static String PREFERENCE_PICTURE_ALPHA = "settings_picture_alpha";
     public final static String PREFERENCE_PICTURE_POSITION = "settings_picture_position";
     public final static String PREFERENCE_PICTURE_DEGREE = "settings_picture_degree";
 

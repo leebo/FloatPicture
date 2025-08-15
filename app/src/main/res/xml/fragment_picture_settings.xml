@@ -12,23 +12,5 @@
             app:singleLine="true"
             app:summary="@string/settings_picture_degree_sum"
             app:title="@string/settings_picture_degree" />
-        <Preference
-            android:selectAllOnFocus="true"
-            app:iconSpaceReserved="false"
-            app:key="settings_picture_alpha"
-            app:singleLine="true"
-            app:summary="@string/settings_picture_alpha_sum"
-            app:title="@string/settings_picture_alpha" />
-    </PreferenceCategory>
-    <PreferenceCategory
-        app:iconSpaceReserved="false"
-        app:title="@string/settings_window">
-        <Preference
-            android:selectAllOnFocus="true"
-            app:iconSpaceReserved="false"
-            app:key="settings_picture_position"
-            app:singleLine="true"
-            app:summary="@string/settings_picture_position_sum"
-            app:title="@string/settings_picture_position" />
     </PreferenceCategory>
 </PreferenceScreen>
