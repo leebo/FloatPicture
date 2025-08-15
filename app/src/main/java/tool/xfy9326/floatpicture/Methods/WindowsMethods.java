@@ -53,12 +53,15 @@ public class WindowsMethods {
                                 | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
             // Control buttons should be touchable by default
         } else {
-            // Standard flags for non-touchable overlay - add FLAG_DIM_BEHIND for opaque effect
-            // Important: Do NOT use FLAG_LAYOUT_NO_LIMITS to avoid covering control buttons
+            // Standard flags for non-touchable overlay - add flags to cover entire screen including status bar
             layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL 
                                 | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                                 | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                                | WindowManager.LayoutParams.FLAG_DIM_BEHIND;
+                                | WindowManager.LayoutParams.FLAG_DIM_BEHIND
+                                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                                | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                                | WindowManager.LayoutParams.FLAG_FULLSCREEN
+                                | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR;
             // Set maximum dimming for complete opacity
             layoutParams.dimAmount = 1.0f;
         }
@@ -87,7 +90,13 @@ public class WindowsMethods {
             layoutParams.y = 0;
             layoutParams.gravity = Gravity.TOP | Gravity.LEFT;
             layoutParams.format = PixelFormat.OPAQUE;  // Force opaque format for mask pictures
-            android.util.Log.d("FloatPicture", "Set fullscreen picture format to OPAQUE for mask");
+            
+            // Handle display cutout (notch) for Android P+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            }
+            
+            android.util.Log.d("FloatPicture", "Set fullscreen picture format to OPAQUE for mask with status bar coverage");
         }
         
         // No alpha/transparency settings - always fully opaque

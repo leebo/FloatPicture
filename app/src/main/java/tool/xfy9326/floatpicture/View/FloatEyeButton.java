@@ -85,7 +85,7 @@ public class FloatEyeButton extends ImageView {
         
         // 设置窗口类型 - 使用最高层级确保显示在遮罩图片上方
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // For Android O+, use TYPE_APPLICATION_OVERLAY but with SYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS
+            // For Android O+, use TYPE_APPLICATION_OVERLAY with highest priority system flags
             layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
         } else {
             // For older versions, use TYPE_SYSTEM_ERROR which has highest priority
@@ -98,7 +98,9 @@ public class FloatEyeButton extends ImageView {
                 | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                 | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR;
+                | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR
+                | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+                | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH;
         
         // 设置位置和大小
         layoutParams.gravity = Gravity.START | Gravity.TOP;
@@ -108,14 +110,18 @@ public class FloatEyeButton extends ImageView {
         layoutParams.height = 120;
         layoutParams.format = PixelFormat.TRANSLUCENT;
         
-        // Force this window to be on the highest layer
+        // Force this window to be on the highest layer above all other overlays
         layoutParams.flags |= WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
         
-        // Add window level for higher z-order (Android API 30+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Use highest possible window level
-            layoutParams.preferredDisplayModeId = 0;
+        // Add critical system-level flags to ensure highest priority
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // For Android O+, use system alert window behavior within TYPE_APPLICATION_OVERLAY
+            layoutParams.flags |= WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED;
+            layoutParams.flags |= WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON;
         }
+        
+        // Force eye button to always be on the absolute top layer
+        layoutParams.flags |= WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;
         
         
         // No alpha/transparency settings - always fully opaque
@@ -279,11 +285,14 @@ public class FloatEyeButton extends ImageView {
     public void bringToFront() {
         try {
             if (getParent() != null) {
-                Log.d(TAG, "Bringing FloatEyeButton to front by updating layout");
-                // Update the layout to bring the window to front
-                windowManager.updateViewLayout(this, layoutParams);
-                // Also call the view's bringToFront() method
-                super.bringToFront();
+                Log.d(TAG, "Bringing FloatEyeButton to front by removing and re-adding");
+                // Remove and re-add to ensure it's on the absolute top layer
+                windowManager.removeView(this);
+                windowManager.addView(this, layoutParams);
+                Log.d(TAG, "FloatEyeButton successfully brought to front");
+            } else {
+                Log.d(TAG, "FloatEyeButton not attached, showing it now");
+                show();
             }
         } catch (Exception e) {
             Log.e(TAG, "Error bringing FloatEyeButton to front", e);
