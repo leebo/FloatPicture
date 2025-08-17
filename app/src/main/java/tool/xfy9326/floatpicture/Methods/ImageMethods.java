@@ -17,6 +17,7 @@ import androidx.exifinterface.media.ExifInterface;
 import androidx.preference.PreferenceManager;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Objects;
 
@@ -38,10 +39,10 @@ public class ImageMethods {
             }
             
             // Generate a unique ID for this image
-            String id = System.currentTimeMillis() + "-" + uri.toString().hashCode();
+            String id = System.currentTimeMillis() + "-" + Math.abs(uri.toString().hashCode());
             android.util.Log.d("FloatPicture", "Generated picture ID: " + id + " for URI: " + uri);
             
-            // Load bitmap from URI and save to internal storage
+            // Load bitmap from URI
             Bitmap bitmap = getNewBitmap(mContext, uri);
             if (bitmap == null) {
                 android.util.Log.e("FloatPicture", "setNewImage: failed to load bitmap from uri");
@@ -52,33 +53,135 @@ public class ImageMethods {
             // Initialize paths
             Config.initializePaths(mContext);
             
-            // Save bitmap to internal storage files
-            String imagePath = Config.DEFAULT_PICTURE_DIR + id + ".webp";
-            String tempPath = Config.DEFAULT_PICTURE_TEMP_DIR + id + "_temp.webp";
+            // Enhanced save logic with retry mechanism
+            // Try main save multiple times with delays
+            boolean mainSaved = false;
+            for (int attempt = 1; attempt <= 3; attempt++) {
+                android.util.Log.d("FloatPicture", "Main save attempt " + attempt + "/3");
+                mainSaved = saveBitmapToInternalStorage(mContext, bitmap, id + ".webp", false);
+                if (mainSaved) {
+                    android.util.Log.d("FloatPicture", "Main save succeeded on attempt " + attempt);
+                    break;
+                } else {
+                    android.util.Log.w("FloatPicture", "Main save failed on attempt " + attempt);
+                    if (attempt < 3) {
+                        try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                    }
+                }
+            }
             
-            try {
-                // Create directories if they don't exist
-                File imageDir = new File(Config.DEFAULT_PICTURE_DIR);
-                File tempDir = new File(Config.DEFAULT_PICTURE_TEMP_DIR);
-                if (!imageDir.exists()) imageDir.mkdirs();
-                if (!tempDir.exists()) tempDir.mkdirs();
-                
-                // Save bitmap to files
-                IOMethods.saveBitmap(bitmap, 80, imagePath);
-                IOMethods.saveBitmap(bitmap, 80, tempPath);
-                
-                android.util.Log.d("FloatPicture", "Saved bitmap to: " + imagePath);
-                android.util.Log.d("FloatPicture", "Saved temp bitmap to: " + tempPath);
-                
+            // Try temp save (for backward compatibility)
+            boolean tempSaved = saveBitmapToInternalStorage(mContext, bitmap, id + "_temp.webp", true);
+            
+            // At minimum, main save must succeed
+            if (mainSaved) {
+                android.util.Log.d("FloatPicture", "Successfully saved main bitmap for ID: " + id + " (temp: " + tempSaved + ")");
                 return id;
-            } catch (Exception e) {
-                android.util.Log.e("FloatPicture", "Failed to save bitmap files", e);
+            } else {
+                android.util.Log.e("FloatPicture", "Critical: Main save failed after 3 attempts - main: " + mainSaved + ", temp: " + tempSaved);
+                // Clean up temp file if it was created but main failed
+                if (tempSaved) {
+                    try {
+                        File tempFile = new File(mContext.getFilesDir(), "Pictures/.TEMP/" + id + "_temp.webp");
+                        if (tempFile.exists()) {
+                            tempFile.delete();
+                            android.util.Log.d("FloatPicture", "Cleaned up temp file after main save failure");
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.w("FloatPicture", "Failed to clean up temp file", e);
+                    }
+                }
                 return null;
             }
         } catch (Exception e) {
             android.util.Log.e("FloatPicture", "setNewImage: Exception occurred", e);
             e.printStackTrace();
             return null;
+        }
+    }
+    
+    private static boolean saveBitmapToInternalStorage(Context context, Bitmap bitmap, String filename, boolean isTemp) {
+        try {
+            android.util.Log.d("FloatPicture", "=== SAVE BITMAP START === filename: " + filename + ", isTemp: " + isTemp);
+            
+            // Create the Pictures directory in internal storage
+            File picturesDir = new File(context.getFilesDir(), "Pictures");
+            android.util.Log.d("FloatPicture", "Pictures dir path: " + picturesDir.getAbsolutePath());
+            if (!picturesDir.exists()) {
+                boolean created = picturesDir.mkdirs();
+                android.util.Log.d("FloatPicture", "Pictures directory created: " + created);
+            } else {
+                android.util.Log.d("FloatPicture", "Pictures directory already exists");
+            }
+            
+            File targetDir = picturesDir;
+            if (isTemp) {
+                targetDir = new File(picturesDir, ".TEMP");
+                android.util.Log.d("FloatPicture", "Temp target dir: " + targetDir.getAbsolutePath());
+                if (!targetDir.exists()) {
+                    boolean created = targetDir.mkdirs();
+                    android.util.Log.d("FloatPicture", "Temp directory created: " + created);
+                } else {
+                    android.util.Log.d("FloatPicture", "Temp directory already exists");
+                }
+            } else {
+                android.util.Log.d("FloatPicture", "Main target dir: " + targetDir.getAbsolutePath());
+            }
+            
+            File imageFile = new File(targetDir, filename);
+            android.util.Log.d("FloatPicture", "Final image file path: " + imageFile.getAbsolutePath());
+            
+            // Delete existing file if it exists
+            if (imageFile.exists()) {
+                boolean deleted = imageFile.delete();
+                android.util.Log.d("FloatPicture", "Existing file deleted: " + deleted);
+            }
+            
+            // Save bitmap to file
+            android.util.Log.d("FloatPicture", "About to compress bitmap - format: WEBP, quality: 80, bitmap: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+            try (FileOutputStream fos = new FileOutputStream(imageFile)) {
+                android.util.Log.d("FloatPicture", "FileOutputStream created successfully for: " + imageFile.getAbsolutePath());
+                
+                boolean compressed = bitmap.compress(Bitmap.CompressFormat.WEBP, 80, fos);
+                android.util.Log.d("FloatPicture", "Bitmap compress result: " + compressed);
+                
+                fos.flush();
+                android.util.Log.d("FloatPicture", "FileOutputStream flushed");
+                
+                // Verify file was created and has content
+                boolean exists = imageFile.exists();
+                long fileSize = exists ? imageFile.length() : 0;
+                boolean success = compressed && exists && fileSize > 0;
+                
+                android.util.Log.d("FloatPicture", "Saved bitmap to: " + imageFile.getAbsolutePath() + 
+                    " (compressed: " + compressed + ", exists: " + exists + ", size: " + fileSize + " bytes, success: " + success + ")");
+                
+                // Additional verification - try to read back the file
+                if (success) {
+                    try {
+                        android.util.Log.d("FloatPicture", "Starting verification read-back...");
+                        android.graphics.Bitmap testBitmap = android.graphics.BitmapFactory.decodeFile(imageFile.getAbsolutePath());
+                        if (testBitmap != null) {
+                            android.util.Log.d("FloatPicture", "Verification: Successfully read back bitmap " + testBitmap.getWidth() + "x" + testBitmap.getHeight());
+                            testBitmap.recycle();
+                        } else {
+                            android.util.Log.e("FloatPicture", "Verification: Failed to read back bitmap from " + imageFile.getAbsolutePath());
+                            success = false;
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.e("FloatPicture", "Verification: Exception reading back bitmap", e);
+                        success = false;
+                    }
+                } else {
+                    android.util.Log.e("FloatPicture", "Initial save failed - skipping verification");
+                }
+                
+                android.util.Log.d("FloatPicture", "=== SAVE BITMAP END === result: " + success);
+                return success;
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "Error saving bitmap to internal storage: " + filename, e);
+            return false;
         }
     }
 
@@ -107,8 +210,11 @@ public class ImageMethods {
         // Make the background black to ensure image is visible (no transparency)
         imageView.setBackgroundColor(0xFF000000);
         
+        // Force full opacity at creation time
+        imageView.setAlpha(1.0f);
+        
         android.util.Log.d("FloatPicture", "Created fullscreen image view with bitmap: " 
-            + fullscreenBitmap.getWidth() + "x" + fullscreenBitmap.getHeight());
+            + fullscreenBitmap.getWidth() + "x" + fullscreenBitmap.getHeight() + " (forced alpha=1.0)");
         
         // Enable system UI hiding for fullscreen immersive experience
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
@@ -145,20 +251,35 @@ public class ImageMethods {
                 android.util.Log.d("FloatPicture", "Applied rotation: " + degree + " degrees");
             }
             
-            // Create opaque bitmap with black background - no transparency allowed
+            // Create completely opaque bitmap - force RGB_565 format with no alpha channel
             Bitmap opaqueBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.RGB_565);  // RGB_565 has no alpha channel
             Canvas canvas = new Canvas(opaqueBitmap);
             
-            // Fill with black background to ensure no transparency
+            // Fill entire canvas with solid black to ensure complete opacity
             canvas.drawColor(0xFF000000);  // Solid black background
             
-            // Draw the rotated bitmap scaled to fill the screen
+            // Force paint to be completely opaque
+            Paint backgroundPaint = new Paint();
+            backgroundPaint.setColor(0xFF000000);  // Solid black
+            backgroundPaint.setAlpha(255);  // Maximum opacity
+            canvas.drawRect(0, 0, screenWidth, screenHeight, backgroundPaint);
+            
+            // Draw the rotated bitmap scaled to fill the screen with forced opacity
             android.graphics.Rect srcRect = new android.graphics.Rect(0, 0, rotatedBitmap.getWidth(), rotatedBitmap.getHeight());
             android.graphics.Rect dstRect = new android.graphics.Rect(0, 0, screenWidth, screenHeight);
             
             Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
             paint.setFilterBitmap(true);
+            paint.setAlpha(255);  // Force maximum opacity
+            paint.setXfermode(null);  // Use default blending mode
             canvas.drawBitmap(rotatedBitmap, srcRect, dstRect, paint);
+            
+            // Additional security: draw another black layer on top if needed
+            Paint securityPaint = new Paint();
+            securityPaint.setColor(0xFF000000);
+            securityPaint.setAlpha(255);
+            securityPaint.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_OVER));
+            canvas.drawRect(0, 0, screenWidth, screenHeight, securityPaint);
             
             // Clean up intermediate bitmap if rotation was applied
             if (rotatedBitmap != originalBitmap) {
@@ -275,33 +396,34 @@ public class ImageMethods {
         try {
             android.util.Log.d("FloatPicture", "getPreviewBitmap called for ID: " + id);
             
-            // Initialize paths
-            Config.initializePaths(mContext);
-            
-            // Try loading from internal storage file  
-            String imagePath = Config.DEFAULT_PICTURE_DIR + id + ".webp";
-            File imageFile = new File(imagePath);
+            // Try to load from main location first
+            File imageFile = new File(mContext.getFilesDir(), "Pictures" + File.separator + id + ".webp");
             
             if (imageFile.exists()) {
-                android.util.Log.d("FloatPicture", "Loading preview bitmap from file: " + imagePath);
-                Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+                android.util.Log.d("FloatPicture", "Loading preview bitmap from main: " + imageFile.getAbsolutePath());
+                Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
                 if (bitmap != null) {
-                    // Create a smaller preview version
-                    float scale = Math.min(100.0f / bitmap.getWidth(), 100.0f / bitmap.getHeight());
-                    if (scale < 1.0f) {
-                        Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, 
-                            Math.round(bitmap.getWidth() * scale), 
-                            Math.round(bitmap.getHeight() * scale), true);
-                        bitmap.recycle();
-                        bitmap = scaledBitmap;
-                    }
-                    android.util.Log.d("FloatPicture", "Successfully created preview bitmap");
-                    return bitmap;
+                    return createPreviewFromBitmap(bitmap);
                 } else {
-                    android.util.Log.e("FloatPicture", "Failed to decode preview bitmap from file: " + imagePath);
+                    android.util.Log.e("FloatPicture", "Failed to decode preview bitmap from main: " + imageFile.getAbsolutePath());
                 }
             } else {
-                android.util.Log.e("FloatPicture", "Preview image file does not exist: " + imagePath);
+                android.util.Log.w("FloatPicture", "Preview main image file does not exist: " + imageFile.getAbsolutePath());
+            }
+            
+            // Fallback: try to load from temp location
+            File tempFile = new File(mContext.getFilesDir(), "Pictures" + File.separator + ".TEMP" + File.separator + id + "_temp.webp");
+            if (tempFile.exists()) {
+                android.util.Log.d("FloatPicture", "Fallback: Loading preview from temp: " + tempFile.getAbsolutePath());
+                Bitmap bitmap = BitmapFactory.decodeFile(tempFile.getAbsolutePath());
+                if (bitmap != null) {
+                    android.util.Log.d("FloatPicture", "Successfully loaded preview from temp");
+                    return createPreviewFromBitmap(bitmap);
+                } else {
+                    android.util.Log.e("FloatPicture", "Failed to decode preview bitmap from temp: " + tempFile.getAbsolutePath());
+                }
+            } else {
+                android.util.Log.w("FloatPicture", "Preview temp image file also does not exist: " + tempFile.getAbsolutePath());
             }
             
             // Fallback to default placeholder
@@ -312,32 +434,79 @@ public class ImageMethods {
             return getEditBitmap(mContext, 100, 100);
         }
     }
+    
+    private static Bitmap createPreviewFromBitmap(Bitmap bitmap) {
+        try {
+            // Create a smaller preview version
+            float scale = Math.min(100.0f / bitmap.getWidth(), 100.0f / bitmap.getHeight());
+            if (scale < 1.0f) {
+                Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, 
+                    Math.round(bitmap.getWidth() * scale), 
+                    Math.round(bitmap.getHeight() * scale), true);
+                bitmap.recycle();
+                android.util.Log.d("FloatPicture", "Successfully created scaled preview bitmap");
+                return scaledBitmap;
+            } else {
+                android.util.Log.d("FloatPicture", "Using original bitmap as preview (already small enough)");
+                return bitmap;
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "Error creating preview from bitmap", e);
+            bitmap.recycle();
+            return null;
+        }
+    }
 
     public static Bitmap getShowBitmap(Context mContext, String id) {
         try {
             android.util.Log.d("FloatPicture", "getShowBitmap called for ID: " + id);
             
-            // Initialize paths
-            Config.initializePaths(mContext);
-            
-            // Try loading from internal storage file
-            String imagePath = Config.DEFAULT_PICTURE_DIR + id + ".webp";
-            File imageFile = new File(imagePath);
+            // Try to load from main location first
+            File imageFile = new File(mContext.getFilesDir(), "Pictures" + File.separator + id + ".webp");
             
             if (imageFile.exists()) {
-                android.util.Log.d("FloatPicture", "Loading bitmap from file: " + imagePath);
-                Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
+                android.util.Log.d("FloatPicture", "Loading bitmap from main location: " + imageFile.getAbsolutePath());
+                Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
                 if (bitmap != null) {
-                    android.util.Log.d("FloatPicture", "Successfully loaded bitmap from file: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+                    android.util.Log.d("FloatPicture", "Successfully loaded bitmap from main: " + bitmap.getWidth() + "x" + bitmap.getHeight());
                     return bitmap;
                 } else {
-                    android.util.Log.e("FloatPicture", "Failed to decode bitmap from file: " + imagePath);
+                    android.util.Log.e("FloatPicture", "Failed to decode bitmap from main location: " + imageFile.getAbsolutePath());
                 }
             } else {
-                android.util.Log.e("FloatPicture", "Image file does not exist: " + imagePath);
+                android.util.Log.w("FloatPicture", "Main image file does not exist: " + imageFile.getAbsolutePath());
             }
             
-            // Fallback to default placeholder
+            // Fallback: try to load from temp location
+            File tempFile = new File(mContext.getFilesDir(), "Pictures" + File.separator + ".TEMP" + File.separator + id + "_temp.webp");
+            if (tempFile.exists()) {
+                android.util.Log.d("FloatPicture", "Fallback: Loading bitmap from temp location: " + tempFile.getAbsolutePath());
+                Bitmap bitmap = BitmapFactory.decodeFile(tempFile.getAbsolutePath());
+                if (bitmap != null) {
+                    android.util.Log.d("FloatPicture", "Successfully loaded bitmap from temp: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+                    
+                    // Try to recreate main file from temp file
+                    try {
+                        android.util.Log.d("FloatPicture", "Attempting to recreate main file from temp...");
+                        boolean recreated = saveBitmapToInternalStorage(mContext, bitmap, id + ".webp", false);
+                        if (recreated) {
+                            android.util.Log.d("FloatPicture", "Successfully recreated main file from temp");
+                        } else {
+                            android.util.Log.w("FloatPicture", "Failed to recreate main file from temp");
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.w("FloatPicture", "Exception while recreating main file", e);
+                    }
+                    
+                    return bitmap;
+                } else {
+                    android.util.Log.e("FloatPicture", "Failed to decode bitmap from temp location: " + tempFile.getAbsolutePath());
+                }
+            } else {
+                android.util.Log.w("FloatPicture", "Temp image file also does not exist: " + tempFile.getAbsolutePath());
+            }
+            
+            // Last resort: default placeholder
             android.util.Log.e("FloatPicture", "Using default placeholder bitmap for ID: " + id);
             return getEditBitmap(mContext, 100, 100);
         } catch (Exception e) {
@@ -347,14 +516,60 @@ public class ImageMethods {
     }
 
     public static boolean isPictureFileExist(String id) {
+        return isPictureFileExist(null, id);
+    }
+
+    public static boolean isPictureFileExist(Context mContext, String id) {
         try {
-            // Use static fallback if context not available for path initialization
-            String imagePath = (Config.DEFAULT_PICTURE_DIR != null ? Config.DEFAULT_PICTURE_DIR : "/data/user/0/tool.xfy9326.floatpicture/files/Pictures/") + id + ".webp";
-            File imageFile = new File(imagePath);
-            boolean exists = imageFile.exists();
-            
-            android.util.Log.d("FloatPicture", "Picture file exists: " + exists + " for path: " + imagePath + " (ID: " + id + ")");
-            return exists;
+            if (mContext != null) {
+                // Check main file first
+                File imageFile = new File(mContext.getFilesDir(), "Pictures" + File.separator + id + ".webp");
+                boolean mainExists = imageFile.exists();
+                android.util.Log.d("FloatPicture", "Main picture file exists: " + mainExists + " for path: " + imageFile.getAbsolutePath() + " (ID: " + id + ")");
+                
+                if (mainExists) {
+                    return true;
+                }
+                
+                // Fallback: check temp file
+                File tempFile = new File(mContext.getFilesDir(), "Pictures" + File.separator + ".TEMP" + File.separator + id + "_temp.webp");
+                boolean tempExists = tempFile.exists();
+                android.util.Log.d("FloatPicture", "Temp picture file exists: " + tempExists + " for path: " + tempFile.getAbsolutePath() + " (ID: " + id + ")");
+                
+                return tempExists;
+            } else {
+                // Fallback when context not available - try common internal storage paths
+                String[] mainPaths = {
+                    "/data/user/0/tool.xfy9326.floatpicture/files/Pictures/" + id + ".webp",
+                    "/data/data/tool.xfy9326.floatpicture/files/Pictures/" + id + ".webp"
+                };
+                
+                String[] tempPaths = {
+                    "/data/user/0/tool.xfy9326.floatpicture/files/Pictures/.TEMP/" + id + "_temp.webp",
+                    "/data/data/tool.xfy9326.floatpicture/files/Pictures/.TEMP/" + id + "_temp.webp"
+                };
+                
+                // Check main files first
+                for (String path : mainPaths) {
+                    File file = new File(path);
+                    if (file.exists()) {
+                        android.util.Log.d("FloatPicture", "Found main picture file at fallback path: " + path);
+                        return true;
+                    }
+                }
+                
+                // Check temp files as fallback
+                for (String path : tempPaths) {
+                    File file = new File(path);
+                    if (file.exists()) {
+                        android.util.Log.d("FloatPicture", "Found temp picture file at fallback path: " + path);
+                        return true;
+                    }
+                }
+                
+                android.util.Log.e("FloatPicture", "No picture file (main or temp) found for ID: " + id + " at any fallback paths");
+                return false;
+            }
         } catch (Exception e) {
             android.util.Log.e("FloatPicture", "isPictureFileExist: Exception occurred", e);
             return false;
@@ -366,25 +581,19 @@ public class ImageMethods {
         MainApplication mainApplication = (MainApplication) mContext.getApplicationContext();
         mainApplication.unregisterView(id);
         
-        // Delete image files
+        // Delete image files from internal storage
         try {
-            // Initialize paths
-            Config.initializePaths(mContext);
-            
-            String imagePath = Config.DEFAULT_PICTURE_DIR + id + ".webp";
-            String tempPath = Config.DEFAULT_PICTURE_TEMP_DIR + id + "_temp.webp";
-            
-            File imageFile = new File(imagePath);
-            File tempFile = new File(tempPath);
+            File imageFile = new File(mContext.getFilesDir(), "Pictures" + File.separator + id + ".webp");
+            File tempFile = new File(mContext.getFilesDir(), "Pictures" + File.separator + ".TEMP" + File.separator + id + "_temp.webp");
             
             if (imageFile.exists()) {
                 boolean deleted = imageFile.delete();
-                android.util.Log.d("FloatPicture", "Deleted image file: " + imagePath + " (success: " + deleted + ")");
+                android.util.Log.d("FloatPicture", "Deleted image file: " + imageFile.getAbsolutePath() + " (success: " + deleted + ")");
             }
             
             if (tempFile.exists()) {
                 boolean deleted = tempFile.delete();
-                android.util.Log.d("FloatPicture", "Deleted temp file: " + tempPath + " (success: " + deleted + ")");
+                android.util.Log.d("FloatPicture", "Deleted temp file: " + tempFile.getAbsolutePath() + " (success: " + deleted + ")");
             }
         } catch (Exception e) {
             android.util.Log.e("FloatPicture", "Error deleting files for ID: " + id, e);

@@ -178,13 +178,13 @@ public class PictureSettingsFragment extends Fragment {
                         // No alpha settings - always fully opaque
                         floatImageView.setPictureId(PictureId);
                         
-                        // For new pictures, save initial configuration before showing
+                        // For new pictures, save initial configuration (inactive by default)
                         if (!Edit_Mode && PictureId != null) {
-                            // First set data control for this specific picture
+                            // Set data control for this specific picture
                             pictureData.setDataControl(PictureId);
                             
-                            // Save basic configuration (no URI path needed since files are saved)
-                            pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, true);
+                            // Save basic configuration - new pictures start as inactive
+                            pictureData.put(Config.DATA_PICTURE_SHOW_ENABLED, false);
                             pictureData.put(Config.DATA_PICTURE_ZOOM, zoom);
                             pictureData.put(Config.DATA_PICTURE_DEFAULT_ZOOM, default_zoom);
                             pictureData.put(Config.DATA_PICTURE_POSITION_X, position_x);
@@ -192,10 +192,9 @@ public class PictureSettingsFragment extends Fragment {
                             pictureData.put(Config.DATA_PICTURE_DEGREE, picture_degree);
                             pictureData.commit(PictureName);
                             
-                            android.util.Log.d("FloatPicture", "Saved picture configuration for ID: " + PictureId);
+                            android.util.Log.d("FloatPicture", "Saved picture configuration for ID: " + PictureId + " (inactive by default)");
                             
-                            // Now show the floating image
-                            ManageMethods.showSingleFloatingImage(requireContext(), PictureId);
+                            // Don't auto-activate - let user manually select which picture to show
                         }
                         
                         alertDialog.cancel();

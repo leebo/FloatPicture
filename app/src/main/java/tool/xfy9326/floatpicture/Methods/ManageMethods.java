@@ -132,6 +132,15 @@ public class ManageMethods {
             id = o.getKey().toString();
             setWindowVisible(context, pictureData, id, visible);
         }
+        
+        // Update MainApplication state
+        MainApplication mainApplication = (MainApplication) context.getApplicationContext();
+        mainApplication.setWinVisible(visible);
+        
+        // Update global preferences
+        PreferenceManager.getDefaultSharedPreferences(context).edit()
+                .putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, visible).apply();
+        
         updateToggleButtonIcon(context); // Update toggle button icon when visibility changes
     }
 
@@ -149,6 +158,10 @@ public class ManageMethods {
             // Update global visibility state
             PreferenceManager.getDefaultSharedPreferences(context).edit()
                     .putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, true).apply();
+            
+            // Update MainApplication state
+            MainApplication mainApplication = (MainApplication) context.getApplicationContext();
+            mainApplication.setWinVisible(true);
                     
             android.util.Log.d("FloatPicture", "Activated floating window for ID: " + id);
         } else { // If 'visible' is false, meaning we are trying to hide the active window
@@ -159,6 +172,10 @@ public class ManageMethods {
             // Update global visibility state to false since no image is active
             PreferenceManager.getDefaultSharedPreferences(context).edit()
                     .putBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, false).apply();
+            
+            // Update MainApplication state
+            MainApplication mainApplication = (MainApplication) context.getApplicationContext();
+            mainApplication.setWinVisible(false);
                     
             android.util.Log.d("FloatPicture", "Deactivated floating window for ID: " + id);
         }
@@ -166,7 +183,7 @@ public class ManageMethods {
     }
     
     // Helper method to deactivate all images (for single active image design)
-    private static void deactivateAllImages(Context context) {
+    public static void deactivateAllImages(Context context) {
         PictureData tempPictureData = new PictureData();
         LinkedHashMap<String, String> allPictures = tempPictureData.getListArray();
         for (Map.Entry<String, String> entry : allPictures.entrySet()) {
@@ -225,6 +242,9 @@ public class ManageMethods {
             
             // Show the window if not already showing
             if (floatImageView != null && floatImageView.getParent() == null) {
+                // Force full opacity before showing
+                floatImageView.setAlpha(1.0f);
+                
                 WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(mContext, false, false);
                 getWindowManager(mContext).addView(floatImageView, layoutParams);
                 
@@ -235,7 +255,7 @@ public class ManageMethods {
                     android.util.Log.w("FloatPicture", "Could not bring eye button to front: " + e.getMessage());
                 }
                 
-                android.util.Log.d("FloatPicture", "Successfully showed floating window for ID: " + id);
+                android.util.Log.d("FloatPicture", "Successfully showed floating window for ID: " + id + " (forced alpha=1.0)");
             } else {
                 android.util.Log.w("FloatPicture", "FloatImageView is null or already has parent for ID: " + id);
             }
@@ -288,6 +308,34 @@ public class ManageMethods {
             } else {
                 toggleButton.setIcon(R.drawable.ic_visibility_off, R.string.toggle_visibility_off);
             }
+        }
+        
+        // Also update eye button icon to stay synchronized
+        updateEyeButtonIcon(context);
+    }
+    
+    public static void updateEyeButtonIcon(Context context) {
+        // Update eye button icon based on global visibility state
+        boolean isVisible = PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, Config.DATA_DEFAULT_GLOBAL_VISIBILITY);
+        try {
+            tool.xfy9326.floatpicture.Services.NotificationService.updateEyeButtonVisibilityIcon(isVisible);
+        } catch (Exception e) {
+            android.util.Log.w("FloatPicture", "Could not update eye button icon: " + e.getMessage());
+        }
+        
+        // Also update notification bar icon
+        updateNotificationIcon(context);
+    }
+    
+    public static void updateNotificationIcon(Context context) {
+        // Send broadcast to update notification icon
+        try {
+            Intent updateIntent = new Intent(Config.INTENT_ACTION_NOTIFICATION_UPDATE_COUNT);
+            context.sendBroadcast(updateIntent);
+            android.util.Log.d("FloatPicture", "Sent notification icon update broadcast");
+        } catch (Exception e) {
+            android.util.Log.w("FloatPicture", "Could not update notification icon: " + e.getMessage());
         }
     }
 

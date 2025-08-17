@@ -82,14 +82,27 @@ public class IOMethods {
     static void saveBitmap(Bitmap bitmap, int quality, String path) {
         File file = new File(path);
         try {
-            if (!CheckFile(file, true)) {
-                OutputStream outputStream = new FileOutputStream(file);
-                bitmap.compress(Bitmap.CompressFormat.WEBP, quality, outputStream);
-                outputStream.flush();
-                outputStream.close();
-                android.util.Log.d("FloatPicture", "Successfully saved bitmap to: " + path);
-                // Don't recycle the bitmap here - let the caller manage it
+            // Ensure parent directory exists
+            File parentDir = file.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                boolean created = parentDir.mkdirs();
+                android.util.Log.d("FloatPicture", "Parent directory created: " + created + " for path: " + parentDir.getAbsolutePath());
             }
+            
+            // Delete existing file if it exists
+            if (file.exists()) {
+                boolean deleted = file.delete();
+                android.util.Log.d("FloatPicture", "Existing file deleted: " + deleted + " for path: " + path);
+            }
+            
+            // Save the bitmap
+            try (OutputStream outputStream = new FileOutputStream(file)) {
+                boolean compressed = bitmap.compress(Bitmap.CompressFormat.WEBP, quality, outputStream);
+                outputStream.flush();
+                android.util.Log.d("FloatPicture", "Bitmap compression result: " + compressed + " for path: " + path);
+                android.util.Log.d("FloatPicture", "Successfully saved bitmap to: " + path + " (file size: " + file.length() + " bytes)");
+            }
+            
         } catch (IOException e) {
             android.util.Log.e("FloatPicture", "Error saving bitmap to: " + path, e);
             e.printStackTrace();

@@ -76,16 +76,18 @@ public class Config {
     
     public static void initializePaths(Context context) {
         if (DEFAULT_APPLICATION_DIR == null) {
-            File externalFilesDir = context.getExternalFilesDir(null);
-            if (externalFilesDir != null) {
-                DEFAULT_APPLICATION_DIR = externalFilesDir.getAbsolutePath() + File.separator;
-            } else {
-                DEFAULT_APPLICATION_DIR = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "FloatPicture" + File.separator;
-            }
+            // Use internal storage for better reliability and no permission issues
+            File internalDir = context.getFilesDir();
+            DEFAULT_APPLICATION_DIR = internalDir.getAbsolutePath() + File.separator;
+            DEFAULT_PICTURE_DIR = DEFAULT_APPLICATION_DIR + "Pictures" + File.separator;
             DEFAULT_PICTURE_TEMP_DIR = DEFAULT_APPLICATION_DIR + "Pictures" + File.separator + ".TEMP" + File.separator;
             DEFAULT_DATA_DIR = DEFAULT_APPLICATION_DIR + "Data" + File.separator;
-            DEFAULT_PICTURE_DIR = DEFAULT_APPLICATION_DIR + "Pictures" + File.separator;
             NO_MEDIA_FILE_DIR = DEFAULT_APPLICATION_DIR + ".nomedia";
+            
+            android.util.Log.d("FloatPicture", "Initialized paths using internal storage:");
+            android.util.Log.d("FloatPicture", "App dir: " + DEFAULT_APPLICATION_DIR);
+            android.util.Log.d("FloatPicture", "Picture dir: " + DEFAULT_PICTURE_DIR);
+            android.util.Log.d("FloatPicture", "Data dir: " + DEFAULT_DATA_DIR);
         }
     }
 }

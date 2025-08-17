@@ -18,6 +18,7 @@ import android.widget.ImageView;
 import tool.xfy9326.floatpicture.MainApplication;
 import tool.xfy9326.floatpicture.Methods.ManageMethods;
 import tool.xfy9326.floatpicture.R;
+import tool.xfy9326.floatpicture.Utils.Config;
 
 public class FloatEyeButton extends ImageView {
     private static final String TAG = "FloatEyeButton";
@@ -46,6 +47,9 @@ public class FloatEyeButton extends ImageView {
         @Override
         public void run() {
             isLongPressed = true;
+            // 长按时设置灰色滤镜表示可拖动状态
+            setDragModeVisual(true);
+            Log.d(TAG, "Long press detected - entering drag mode with gray tint");
         }
     };
     
@@ -68,64 +72,47 @@ public class FloatEyeButton extends ImageView {
     private void init(Context context) {
         windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         
-        // 设置眼睛图标 - 初始状态应该显示可见图标(表示当前图片是可见的)
-        setImageResource(R.drawable.ic_visible);
+        // 设置眼睛图标 - 根据当前全局可见性状态设置
+        boolean isVisible = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, Config.DATA_DEFAULT_GLOBAL_VISIBILITY);
+        setImageResource(isVisible ? R.drawable.ic_visible : R.drawable.ic_invisible);
         setScaleType(ScaleType.CENTER_INSIDE);
         
         // 加载保存的位置
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        currentX = prefs.getFloat(PREF_POS_X, 100); // 默认位置
-        currentY = prefs.getFloat(PREF_POS_Y, 100);
+        float savedX = prefs.getFloat(PREF_POS_X, 100); // 默认位置
+        float savedY = prefs.getFloat(PREF_POS_Y, 100);
+        
+        // 先设置初始位置（无约束检查），再设置布局参数
+        currentX = savedX;
+        currentY = savedY;
         
         setupLayoutParams();
+        
+        // 布局参数设置后再应用边界约束
+        currentX = constrainX((int) currentX);
+        currentY = constrainY((int) currentY);
+        
+        // 更新布局参数中的位置
+        layoutParams.x = (int) currentX;
+        layoutParams.y = (int) currentY;
+        
+        Log.d(TAG, "Loaded position: (" + savedX + ", " + savedY + ") -> constrained to: (" + currentX + ", " + currentY + ")");
         setupTouchListener();
     }
 
     private void setupLayoutParams() {
-        layoutParams = new WindowManager.LayoutParams();
+        // 使用WindowsMethods的统一方法创建控制按钮布局参数
+        layoutParams = tool.xfy9326.floatpicture.Methods.WindowsMethods.getDefaultLayout(getContext(), true, false, true);
         
-        // 设置窗口类型 - 使用最高层级确保显示在遮罩图片上方
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // For Android O+, use TYPE_APPLICATION_OVERLAY with highest priority system flags
-            layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-        } else {
-            // For older versions, use TYPE_SYSTEM_ERROR which has highest priority
-            layoutParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ERROR;
-        }
-        
-        // 设置窗口标志 - 确保可以接收触摸事件并保持在最上层
-        layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-                | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
-                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR
-                | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-                | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH;
-        
-        // 设置位置和大小 - 使用左上角绝对定位
+        // 覆盖位置设置为自定义位置
         layoutParams.gravity = Gravity.TOP | Gravity.LEFT;
         layoutParams.x = (int) currentX;
         layoutParams.y = (int) currentY;
         layoutParams.width = 120; // 眼睛按钮大小
         layoutParams.height = 120;
-        layoutParams.format = PixelFormat.TRANSLUCENT;
         
-        // Force this window to be on the highest layer above all other overlays
-        layoutParams.flags |= WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
-        
-        // Add critical system-level flags to ensure highest priority
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // For Android O+, use system alert window behavior within TYPE_APPLICATION_OVERLAY
-            layoutParams.flags |= WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED;
-            layoutParams.flags |= WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON;
-        }
-        
-        // Force eye button to always be on the absolute top layer
-        layoutParams.flags |= WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;
-        
-        
-        // No alpha/transparency settings - always fully opaque
+        android.util.Log.d("FloatEyeButton", "Using unified layout params for eye button to avoid conflicts");
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -159,11 +146,20 @@ public class FloatEyeButton extends ImageView {
                             longPressHandler.removeCallbacks(longPressRunnable);
                             waitingForDoubleClick = false;
                             longPressHandler.removeCallbacks(singleClickRunnable);
+                            // 如果还没进入拖动模式但取消了长按，清除可能的视觉效果
+                            if (!isMoving) {
+                                setDragModeVisual(false);
+                            }
                         }
                         
                         // 如果已经长按或者移动距离较大，则进入拖动模式
                         if (isLongPressed || (deltaX > 20 || deltaY > 20)) {
-                            isMoving = true;
+                            if (!isMoving) {
+                                // 首次进入拖动模式时设置灰色视觉效果
+                                isMoving = true;
+                                setDragModeVisual(true);
+                                Log.d(TAG, "Entering drag mode with visual feedback");
+                            }
                             
                             // 正确计算位置：初始窗口位置 + 手指移动的偏移量
                             float moveDeltaX = event.getRawX() - startRawX;
@@ -171,6 +167,10 @@ public class FloatEyeButton extends ImageView {
                             
                             int newX = (int) (initialX + moveDeltaX);
                             int newY = (int) (initialY + moveDeltaY);
+                            
+                            // 添加边界检查，确保眼睛按钮始终可访问
+                            newX = constrainX(newX);
+                            newY = constrainY(newY);
                             
                             currentX = newX;
                             currentY = newY;
@@ -202,6 +202,9 @@ public class FloatEyeButton extends ImageView {
                             waitingForDoubleClick = false;
                             longPressHandler.removeCallbacks(singleClickRunnable);
                         }
+                        
+                        // 恢复原始颜色（无论是否在拖动）
+                        setDragModeVisual(false);
                         
                         isMoving = false;
                         isLongPressed = false;
@@ -256,23 +259,92 @@ public class FloatEyeButton extends ImageView {
             // 隐藏所有浮动图片
             Log.d(TAG, "Hiding all floating windows");
             ManageMethods.setAllWindowsVisible(getContext(), false);
-            setImageResource(R.drawable.ic_invisible); // 图片隐藏时显示不可见图标
             mainApplication.setWinVisible(false);
         } else {
             // 显示所有浮动图片
             Log.d(TAG, "Showing all floating windows");
             ManageMethods.setAllWindowsVisible(getContext(), true);
-            setImageResource(R.drawable.ic_visible); // 图片可见时显示可见图标
             mainApplication.setWinVisible(true);
         }
+        
+        // Note: setAllWindowsVisible will call updateToggleButtonIcon which will update our icon
+        // No need to manually set the icon here as it will be updated by the system
+    }
+
+    private int constrainX(int x) {
+        // 获取屏幕宽度
+        int screenWidth = getContext().getResources().getDisplayMetrics().widthPixels;
+        int buttonWidth = layoutParams.width;
+        
+        // 确保按钮不会超出屏幕左右边界
+        if (x < 0) {
+            return 0;
+        }
+        if (x + buttonWidth > screenWidth) {
+            return screenWidth - buttonWidth;
+        }
+        return x;
+    }
+    
+    private int constrainY(int y) {
+        // 获取屏幕高度和状态栏高度
+        int screenHeight = getContext().getResources().getDisplayMetrics().heightPixels;
+        int buttonHeight = layoutParams.height;
+        
+        // 获取状态栏高度
+        int statusBarHeight = getStatusBarHeight();
+        
+        // 确保按钮不会被状态栏遮挡，也不会超出屏幕底部
+        int minY = statusBarHeight + 20; // 状态栏高度 + 20px的安全边距
+        int maxY = screenHeight - buttonHeight - 100; // 屏幕底部 - 按钮高度 - 导航栏预留空间
+        
+        if (y < minY) {
+            Log.d(TAG, "Constraining Y from " + y + " to " + minY + " (status bar protection)");
+            return minY;
+        }
+        if (y > maxY) {
+            Log.d(TAG, "Constraining Y from " + y + " to " + maxY + " (bottom boundary)");
+            return maxY;
+        }
+        return y;
+    }
+    
+    private int getStatusBarHeight() {
+        int resourceId = getContext().getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            return getContext().getResources().getDimensionPixelSize(resourceId);
+        }
+        // 如果无法获取，使用默认值 (24dp)
+        float density = getContext().getResources().getDisplayMetrics().density;
+        return (int) (24 * density);
     }
 
     private void savePosition() {
+        // 保存位置前也进行边界检查
+        int constrainedX = constrainX((int) currentX);
+        int constrainedY = constrainY((int) currentY);
+        
+        if (constrainedX != currentX || constrainedY != currentY) {
+            // 如果位置被调整了，更新当前位置和窗口位置
+            currentX = constrainedX;
+            currentY = constrainedY;
+            layoutParams.x = constrainedX;
+            layoutParams.y = constrainedY;
+            
+            try {
+                windowManager.updateViewLayout(this, layoutParams);
+            } catch (Exception e) {
+                Log.e(TAG, "Error updating layout after position constraint", e);
+            }
+        }
+        
         SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putFloat(PREF_POS_X, currentX);
         editor.putFloat(PREF_POS_Y, currentY);
         editor.apply();
+        
+        Log.d(TAG, "Saved eye button position: (" + currentX + ", " + currentY + ")");
     }
 
     public void show() {
@@ -325,6 +397,20 @@ public class FloatEyeButton extends ImageView {
             setImageResource(R.drawable.ic_visible); // 图片可见时显示可见图标
         } else {
             setImageResource(R.drawable.ic_invisible); // 图片隐藏时显示不可见图标
+        }
+    }
+    
+    private void setDragModeVisual(boolean dragMode) {
+        if (dragMode) {
+            // 进入拖动模式：设置灰色滤镜
+            setColorFilter(0x80808080); // 半透明灰色滤镜
+            setAlpha(0.7f); // 降低透明度
+            Log.d(TAG, "Enabled drag mode visual (gray tint)");
+        } else {
+            // 退出拖动模式：清除滤镜，恢复原始颜色
+            clearColorFilter();
+            setAlpha(1.0f); // 恢复完全不透明
+            Log.d(TAG, "Disabled drag mode visual (restored original color)");
         }
     }
 }

@@ -31,20 +31,11 @@ public class WindowsMethods {
     public static WindowManager.LayoutParams getDefaultLayout(Context context, boolean touchable, boolean overLayout, boolean isControlButton) {
         WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams();
         
-        if (isControlButton) {
-            // Control buttons need higher priority to stay above mask layers
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-            } else {
-                layoutParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ERROR;  // Higher priority
-            }
+        // 统一使用相同的窗口类型避免层级冲突
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
         } else {
-            // Mask windows use standard overlay type 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-            } else {
-                layoutParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;  // Lower priority than control buttons
-            }
+            layoutParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
         }
         
         if (isControlButton) {
@@ -53,17 +44,23 @@ public class WindowsMethods {
                                 | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
             // Control buttons should be touchable by default
         } else {
-            // Standard flags for non-touchable overlay - add flags to cover entire screen including status bar
+            // Base flags for floating image overlay
             layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL 
                                 | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                                | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                                | WindowManager.LayoutParams.FLAG_DIM_BEHIND
                                 | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                                 | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
                                 | WindowManager.LayoutParams.FLAG_FULLSCREEN
                                 | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR;
-            // Set maximum dimming for complete opacity
-            layoutParams.dimAmount = 1.0f;
+            
+            // Configure touch behavior based on touchable parameter
+            if (!touchable) {
+                // For non-interactive floating images: allow touches to pass through to apps below
+                layoutParams.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+                android.util.Log.d("FloatPicture", "Set floating image as non-touchable (touch passthrough enabled)");
+            } else {
+                // For interactive floating images: capture touches but don't interfere with system
+                android.util.Log.d("FloatPicture", "Set floating image as touchable (interactive mode)");
+            }
         }
         
         if (overLayout) {
@@ -80,16 +77,16 @@ public class WindowsMethods {
             layoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
             layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
             layoutParams.gravity = Gravity.BOTTOM | Gravity.END;
-            layoutParams.format = PixelFormat.TRANSLUCENT;
-            android.util.Log.d("FloatPicture", "Set control button format to TRANSLUCENT");
+            layoutParams.format = PixelFormat.RGBA_8888;  // 使用RGBA格式而不是TRANSLUCENT
+            android.util.Log.d("FloatPicture", "Set control button format to RGBA_8888 (isolated from mask)");
         } else {
-            // Fullscreen floating picture layout - use OPAQUE format for mask pictures
+            // Fullscreen floating picture layout - COMPLETELY OPAQUE
             layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT;
             layoutParams.height = WindowManager.LayoutParams.MATCH_PARENT;
             layoutParams.x = 0;
             layoutParams.y = 0;
             layoutParams.gravity = Gravity.TOP | Gravity.LEFT;
-            layoutParams.format = PixelFormat.OPAQUE;  // Force opaque format for mask pictures
+            layoutParams.format = PixelFormat.OPAQUE;  // Force opaque format - no transparency allowed
             
             // Handle display cutout (notch) for Android P+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -99,7 +96,20 @@ public class WindowsMethods {
             android.util.Log.d("FloatPicture", "Set fullscreen picture format to OPAQUE for mask with status bar coverage");
         }
         
-        // No alpha/transparency settings - always fully opaque
+        // CRITICAL: Force window to be completely opaque at all levels
+        layoutParams.alpha = 1.0f;  // Window level opacity
+        
+        if (!isControlButton) {
+            // For floating images, eliminate ALL sources of transparency
+            layoutParams.dimAmount = 0.0f;  // No dimming effect
+            layoutParams.screenBrightness = -1.0f;  // Don't change screen brightness
+            layoutParams.buttonBrightness = -1.0f;  // Don't change button brightness
+            
+            // Force solid window appearance
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            }
+        }
         
         android.util.Log.d("FloatPicture", "Created layout params: " + layoutParams.width + "x" + layoutParams.height + " gravity=" + layoutParams.gravity + " flags=" + layoutParams.flags);
         return layoutParams;

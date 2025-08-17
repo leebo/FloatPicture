@@ -29,16 +29,19 @@ public class FloatImageView extends FrameLayout {
     private void init(Context context) {
         windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
 
-        // Set black background to ensure image visibility (no transparency)
-        setBackgroundColor(0xFF000000);
-
-        // Create and add ImageView
+        // Force complete opacity at every level
+        setBackgroundColor(0xFF000000);  // Solid black background
+        setAlpha(1.0f);  // Force frame alpha to maximum
+        
+        // Create and add ImageView with forced opacity
         imageView = new AppCompatImageView(context);
         FrameLayout.LayoutParams imageParams = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT);
         imageView.setLayoutParams(imageParams);
         imageView.setScaleType(ScaleType.FIT_XY);  // Scale to fill exactly
+        imageView.setBackgroundColor(0xFF000000);  // Solid black for ImageView too
+        imageView.setAlpha(1.0f);  // Force ImageView alpha to maximum
         addView(imageView);
 
         // Note: Don't add to WindowManager in constructor - this may be called from background thread
@@ -64,6 +67,11 @@ public class FloatImageView extends FrameLayout {
         if (bm != null) {
             android.util.Log.d("FloatPicture", "Setting bitmap to FloatImageView: " + bm.getWidth() + "x" + bm.getHeight() + " bytes=" + bm.getByteCount());
             imageView.setImageBitmap(bm);
+            
+            // Force full opacity for floating images
+            this.setAlpha(1.0f);
+            imageView.setAlpha(1.0f);
+            android.util.Log.d("FloatPicture", "Forced FloatImageView and ImageView alpha to 1.0 (fully opaque)");
         } else {
             android.util.Log.e("FloatPicture", "Attempted to set null bitmap to FloatImageView");
         }

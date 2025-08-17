@@ -155,11 +155,38 @@ public class PictureData {
         try {
             Iterator<String> iterator = listObject.keys();
             LinkedHashMap<String, String> arr = new LinkedHashMap<>();
+            
+            // First collect all entries into a temporary map
+            java.util.Map<String, String> tempMap = new java.util.HashMap<>();
             String key;
             while (iterator.hasNext()) {
                 key = iterator.next();
-                arr.put(key, listObject.getString(key));
+                tempMap.put(key, listObject.getString(key));
             }
+            
+            // Sort by key (which contains timestamp) in descending order (newest first)
+            java.util.List<java.util.Map.Entry<String, String>> sortedEntries = 
+                new java.util.ArrayList<>(tempMap.entrySet());
+            sortedEntries.sort((entry1, entry2) -> {
+                try {
+                    // Extract timestamp from ID (before the first dash)
+                    String id1 = entry1.getKey();
+                    String id2 = entry2.getKey();
+                    long timestamp1 = Long.parseLong(id1.split("-")[0]);
+                    long timestamp2 = Long.parseLong(id2.split("-")[0]);
+                    // Sort descending (newest first)
+                    return Long.compare(timestamp2, timestamp1);
+                } catch (Exception e) {
+                    // If parsing fails, use string comparison
+                    return entry2.getKey().compareTo(entry1.getKey());
+                }
+            });
+            
+            // Add sorted entries to LinkedHashMap to preserve order
+            for (java.util.Map.Entry<String, String> entry : sortedEntries) {
+                arr.put(entry.getKey(), entry.getValue());
+            }
+            
             return arr;
         } catch (JSONException e) {
             e.printStackTrace();

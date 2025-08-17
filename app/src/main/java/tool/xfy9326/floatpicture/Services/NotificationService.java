@@ -148,8 +148,19 @@ public class NotificationService extends Service {
         remoteViews.setImageViewResource(R.id.imageview_notification_application, R.mipmap.ic_launcher);
         remoteViews.setTextViewText(R.id.textview_picture_num, getString(R.string.notification_picture_count, String.valueOf(mainApplication.getViewCount())));
 
-        // 移除通知栏中的眼睛按钮，使用新的浮动眼睛按钮替代
-        remoteViews.setViewVisibility(R.id.imageview_set_picture_view, View.GONE);
+        // 恢复通知栏中的控制按钮，与浮动眼睛按钮共存
+        remoteViews.setViewVisibility(R.id.imageview_set_picture_view, View.VISIBLE);
+        
+        // 设置通知栏按钮的点击意图
+        Intent intent_button = new Intent(Config.INTENT_ACTION_NOTIFICATION_BUTTON_CLICK);
+        PendingIntent pendingIntent_button = PendingIntent.getBroadcast(this, 0, intent_button, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        remoteViews.setOnClickPendingIntent(R.id.imageview_set_picture_view, pendingIntent_button);
+        
+        // 根据当前状态设置按钮图标
+        boolean isVisible = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+                .getBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, Config.DATA_DEFAULT_GLOBAL_VISIBILITY);
+        remoteViews.setImageViewResource(R.id.imageview_set_picture_view, 
+            isVisible ? R.drawable.ic_invisible : R.drawable.ic_visible);
 
         builder.setContent(remoteViews);
         return builder;
@@ -162,29 +173,37 @@ public class NotificationService extends Service {
             if (remoteViews != null) {
                 MainApplication mainApplication = (MainApplication) getApplicationContext();
                 if (Objects.equals(intent.getAction(), Config.INTENT_ACTION_NOTIFICATION_BUTTON_CLICK)) {
-                    if (mainApplication.getWinVisible()) {
-                        ManageMethods.setAllWindowsVisible(context, false);
-                        remoteViews.setImageViewResource(R.id.imageview_set_picture_view, R.drawable.ic_visible);
-                        mainApplication.setWinVisible(false);
-                        // 更新浮动眼睛按钮图标
-                        if (floatEyeButton != null) {
-                            floatEyeButton.updateVisibilityIcon(false);
-                        }
-                    } else {
-                        ManageMethods.setAllWindowsVisible(context, true);
-                        remoteViews.setImageViewResource(R.id.imageview_set_picture_view, R.drawable.ic_invisible);
-                        mainApplication.setWinVisible(true);
-                        // 更新浮动眼睛按钮图标
-                        if (floatEyeButton != null) {
-                            floatEyeButton.updateVisibilityIcon(true);
-                        }
-                    }
+                    android.util.Log.d("FloatPicture", "Notification button clicked, current visible: " + mainApplication.getWinVisible());
+                    
+                    // 使用标准的切换方法，确保状态同步
+                    boolean currentVisible = mainApplication.getWinVisible();
+                    boolean newVisible = !currentVisible;
+                    
+                    ManageMethods.setAllWindowsVisible(context, newVisible);
+                    
+                    // 更新通知栏图标（注意：图标逻辑是反向的）
+                    remoteViews.setImageViewResource(R.id.imageview_set_picture_view, 
+                        newVisible ? R.drawable.ic_invisible : R.drawable.ic_visible);
+                    
+                    // 通过ManageMethods的updateEyeButtonIcon方法同步浮动眼睛按钮
+                    ManageMethods.updateEyeButtonIcon(context);
+                    
+                    android.util.Log.d("FloatPicture", "Notification button action completed, new visible: " + newVisible);
                     ManageListAdapter manageListAdapter = ((MainApplication) getApplicationContext()).getManageListAdapter();
                     if (manageListAdapter != null) {
                         manageListAdapter.notifyDataSetChanged();
                     }
                 } else if (Objects.equals(intent.getAction(), Config.INTENT_ACTION_NOTIFICATION_UPDATE_COUNT)) {
+                    // 更新图片数量
                     remoteViews.setTextViewText(R.id.textview_picture_num, getString(R.string.notification_picture_count, String.valueOf(mainApplication.getViewCount())));
+                    
+                    // 同时更新可见性图标状态，确保同步
+                    boolean isVisible = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                            .getBoolean(Config.PREFERENCE_GLOBAL_VISIBILITY_STATE, Config.DATA_DEFAULT_GLOBAL_VISIBILITY);
+                    remoteViews.setImageViewResource(R.id.imageview_set_picture_view, 
+                        isVisible ? R.drawable.ic_invisible : R.drawable.ic_visible);
+                    
+                    android.util.Log.d("FloatPicture", "Updated notification count and icon, visible: " + isVisible);
                 }
                 NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 builder_manage.setContent(remoteViews);
@@ -200,6 +219,12 @@ public class NotificationService extends Service {
     public static void bringEyeButtonToFront() {
         if (currentInstance != null && currentInstance.floatEyeButton != null) {
             currentInstance.floatEyeButton.bringToFront();
+        }
+    }
+    
+    public static void updateEyeButtonVisibilityIcon(boolean visible) {
+        if (currentInstance != null && currentInstance.floatEyeButton != null) {
+            currentInstance.floatEyeButton.updateVisibilityIcon(visible);
         }
     }
 }

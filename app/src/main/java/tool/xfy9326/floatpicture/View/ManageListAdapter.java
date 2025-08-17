@@ -56,7 +56,7 @@ public class ManageListAdapter extends AdvancedRecyclerView.Adapter<ManageListVi
         final PictureData pictureData = new PictureData();
         pictureData.setDataControl(mPictureId);
 
-        if (!ImageMethods.isPictureFileExist(mPictureId)) {
+        if (!ImageMethods.isPictureFileExist(mActivity, mPictureId)) {
             holder.textView_Picture_Error.setVisibility(View.VISIBLE);
         } else {
             holder.textView_Picture_Error.setVisibility(View.INVISIBLE);
