@@ -44,13 +44,9 @@ public class WindowsMethods {
                                 | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
             // Control buttons should be touchable by default
         } else {
-            // Base flags for floating image overlay
-            layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL 
-                                | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                                | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-                                | WindowManager.LayoutParams.FLAG_FULLSCREEN
-                                | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR;
+            // 参考标准浮窗实现的flag组合
+            layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
             
             // Configure touch behavior based on touchable parameter
             if (!touchable) {
@@ -86,7 +82,7 @@ public class WindowsMethods {
             layoutParams.x = 0;
             layoutParams.y = 0;
             layoutParams.gravity = Gravity.TOP | Gravity.LEFT;
-            layoutParams.format = PixelFormat.OPAQUE;  // Force opaque format - no transparency allowed
+            layoutParams.format = PixelFormat.TRANSLUCENT;  // 参考标准实现使用TRANSLUCENT格式
             
             // Handle display cutout (notch) for Android P+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
