@@ -64,7 +64,8 @@ public class ManageMethods {
         floatImageView.updatePackageName(ApplicationMethods.getForegroundAppPackageName(mContext));
         ImageMethods.saveFloatImageViewById(mContext, id, floatImageView);
         if (pictureData.getBoolean(Config.DATA_PICTURE_SHOW_ENABLED, Config.DATA_DEFAULT_PICTURE_SHOW_ENABLED)) {
-            WindowsMethods.createWindow(windowManager, floatImageView, false, false);
+            // 实验：使用阻挡触摸的模式来确保完全不透明
+        WindowsMethods.createWindow(windowManager, floatImageView, true, false);
         }
     }
 
@@ -232,8 +233,8 @@ public class ManageMethods {
                 // Get picture settings (zoom is handled automatically for fullscreen)
                 float degree = pictureData.getFloat(Config.DATA_PICTURE_DEGREE, Config.DATA_DEFAULT_PICTURE_DEGREE);
                 
-                // Create FloatImageView with automatic fullscreen scaling - no alpha settings
-                floatImageView = ImageMethods.createPictureView(mContext, bitmap, false, false, 1.0f, degree);
+                // Create FloatImageView with automatic fullscreen scaling - 使用阻挡触摸模式确保不透明
+                floatImageView = ImageMethods.createPictureView(mContext, bitmap, true, false, 1.0f, degree);
                 floatImageView.setPictureId(id);
                 
                 // Save for reuse
@@ -245,7 +246,8 @@ public class ManageMethods {
                 // Force full opacity before showing
                 floatImageView.setAlpha(1.0f);
                 
-                WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(mContext, false, false);
+                // 使用阻挡触摸的布局参数确保完全不透明
+                WindowManager.LayoutParams layoutParams = WindowsMethods.getDefaultLayout(mContext, true, false);
                 getWindowManager(mContext).addView(floatImageView, layoutParams);
                 
                 // Ensure eye button stays on top after showing mask image
