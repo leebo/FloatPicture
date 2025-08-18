@@ -48,6 +48,11 @@ public class Config {
     public final static boolean DATA_DEFAULT_GLOBAL_VISIBILITY = true;
 
     public final static String PREFERENCE_SCREEN_WIDTH = "screen_width";
+    
+    // 模拟器自动遮罩相关配置
+    public final static String PREFERENCE_EMULATOR_AUTO_MASK_ENABLED = "emulator_auto_mask_enabled";
+    public final static String PREFERENCE_EMULATOR_MASK_CONFIG_PREFIX = "emulator_mask_config_";
+    public final static boolean DATA_DEFAULT_EMULATOR_AUTO_MASK_ENABLED = true;
     public final static String PREFERENCE_SCREEN_HEIGHT = "screen_height";
     public final static String PREFERENCE_SCREEN_DENSITY_DPI = "screen_density_dpi";
     public final static String PREFERENCE_SCREEN_RATIO = "screen_ratio";

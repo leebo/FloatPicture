@@ -59,6 +59,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Ensure proper status bar handling
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(getResources().getColor(R.color.colorPrimaryDark));
+        }
+        
         setContentView(R.layout.activity_main);
         init(savedInstanceState);
         ApplicationMethods.startNotificationControl(this);
@@ -119,6 +125,10 @@ public class MainActivity extends AppCompatActivity {
             int itemId = item.getItemId();
             if (itemId == R.id.menu_global_settings) {
                 startActivity(new Intent(MainActivity.this, GlobalSettingsActivity.class));
+            } else if (itemId == R.id.menu_emulator_mask_config) {
+                startActivity(new Intent(MainActivity.this, EmulatorMaskConfigActivity.class));
+            } else if (itemId == R.id.menu_emulator_list) {
+                startActivity(new Intent(MainActivity.this, EmulatorListActivity.class));
             } else if (itemId == R.id.menu_about) {
                 startActivity(new Intent(MainActivity.this, AboutActivity.class));
             } else if (itemId == R.id.menu_back_to_launcher) {

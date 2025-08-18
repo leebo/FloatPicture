@@ -10,6 +10,14 @@
             android:icon="@drawable/ic_settings"
             android:title="@string/settings_global_label" />
         <item
+            android:id="@+id/menu_emulator_mask_config"
+            android:icon="@drawable/ic_gamepad"
+            android:title="模拟器自动遮罩" />
+        <item
+            android:id="@+id/menu_emulator_list"
+            android:icon="@drawable/ic_multi_platform"
+            android:title="模拟器大全" />
+        <item
             android:id="@+id/menu_about"
             android:icon="@drawable/ic_about"
             android:title="@string/about" />

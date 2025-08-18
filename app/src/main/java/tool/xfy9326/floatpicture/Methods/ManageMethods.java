@@ -145,6 +145,17 @@ public class ManageMethods {
         updateToggleButtonIcon(context); // Update toggle button icon when visibility changes
     }
 
+    /**
+     * 简化的窗口可见性控制方法，用于模拟器自动遮罩
+     * @param context 上下文
+     * @param id 图片ID
+     * @param visible 是否可见
+     */
+    public static void setWindowVisible(Context context, String id, boolean visible) {
+        PictureData pictureData = new PictureData();
+        setWindowVisible(context, pictureData, id, visible);
+    }
+
     public static void setWindowVisible(Context context, PictureData pictureData, String id, boolean visible) {
         pictureData.setDataControl(id);
         if (visible) {

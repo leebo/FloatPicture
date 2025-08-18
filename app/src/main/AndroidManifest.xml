@@ -75,6 +75,26 @@
                 android:value=".Activities.AboutActivity" />
         </activity>
 
+        <activity
+            android:name=".Activities.EmulatorMaskConfigActivity"
+            android:label="模拟器自动遮罩配置"
+            android:theme="@style/EmulatorActivity"
+            tools:ignore="InnerclassSeparator">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".Activities.MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".Activities.EmulatorListActivity"
+            android:label="模拟器大全"
+            android:theme="@style/EmulatorActivity"
+            tools:ignore="InnerclassSeparator">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".Activities.MainActivity" />
+        </activity>
+
         <service
             android:name=".Services.NotificationService"
             android:enabled="true"

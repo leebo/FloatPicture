@@ -33,6 +33,9 @@ import tool.xfy9326.floatpicture.Methods.ApplicationMethods; // Added
 import tool.xfy9326.floatpicture.Methods.ManageMethods;
 import tool.xfy9326.floatpicture.R;
 import tool.xfy9326.floatpicture.Utils.Config;
+import tool.xfy9326.floatpicture.Utils.EmulatorDetector;
+import tool.xfy9326.floatpicture.Utils.EmulatorMaskConfig;
+import tool.xfy9326.floatpicture.Utils.RetroEmulatorDatabase;
 import tool.xfy9326.floatpicture.View.FloatImageView; // Added
 import tool.xfy9326.floatpicture.View.FloatEyeButton; // Added
 import tool.xfy9326.floatpicture.View.ManageListAdapter;
@@ -43,13 +46,16 @@ public class NotificationService extends Service {
     private NotificationCompat.Builder builder_manage;
     private NotificationButtonBroadcastReceiver notificationButtonBroadcastReceiver;
     private FloatEyeButton floatEyeButton;
+    private EmulatorMaskConfig emulatorMaskConfig;
+    private String lastForegroundApp = "";
 
     private Handler handler = new Handler(Looper.getMainLooper());
     private Runnable updatePackageNameRunnable = new Runnable() {
         @Override
         public void run() {
-            // Package name tracking removed to reduce CPU and memory usage
-            handler.postDelayed(this, 5000); // Reduced frequency to 5 seconds
+            // 检查前台应用并处理模拟器自动遮罩
+            checkForegroundAppAndHandleEmulatorMask();
+            handler.postDelayed(this, 3000); // 3秒检查一次
         }
     };
 
@@ -95,7 +101,13 @@ public class NotificationService extends Service {
             floatEyeButton.show();
         }
         
-        // Removed package name updating to reduce memory usage
+        // 初始化模拟器遮罩配置
+        if (emulatorMaskConfig == null) {
+            emulatorMaskConfig = new EmulatorMaskConfig(this);
+        }
+        
+        // 启动前台应用监听
+        handler.post(updatePackageNameRunnable);
     }
 
     @Nullable
@@ -226,5 +238,81 @@ public class NotificationService extends Service {
         if (currentInstance != null && currentInstance.floatEyeButton != null) {
             currentInstance.floatEyeButton.updateVisibilityIcon(visible);
         }
+    }
+    
+    /**
+     * 检查前台应用并处理模拟器自动遮罩
+     */
+    private void checkForegroundAppAndHandleEmulatorMask() {
+        try {
+            String currentForegroundApp = ApplicationMethods.getForegroundAppPackageName(this);
+            
+            if (currentForegroundApp == null || currentForegroundApp.equals(lastForegroundApp)) {
+                return; // 没有变化，跳过处理
+            }
+            
+            android.util.Log.d("FloatPicture", "前台应用变化: " + lastForegroundApp + " -> " + currentForegroundApp);
+            
+            // 处理上一个应用的遮罩隐藏
+            handlePreviousAppMaskHide(lastForegroundApp);
+            
+            // 处理当前应用的遮罩显示
+            handleCurrentAppMaskShow(currentForegroundApp);
+            
+            lastForegroundApp = currentForegroundApp;
+            
+        } catch (Exception e) {
+            android.util.Log.e("FloatPicture", "检查前台应用时出错", e);
+        }
+    }
+    
+    /**
+     * 处理上一个应用的遮罩隐藏
+     */
+    private void handlePreviousAppMaskHide(String previousApp) {
+        if (previousApp == null || previousApp.isEmpty()) {
+            return;
+        }
+        
+        // 检查上一个应用是否是模拟器
+        RetroEmulatorDatabase.EmulatorInfo emulatorInfo = EmulatorDetector.checkIfInstalledEmulator(this, previousApp);
+        if (emulatorInfo != null && emulatorMaskConfig.shouldAutoShowMask(previousApp)) {
+            String maskPictureId = emulatorMaskConfig.getMaskPictureId(previousApp);
+            if (maskPictureId != null) {
+                // 隐藏遮罩
+                ManageMethods.setWindowVisible(this, maskPictureId, false);
+                android.util.Log.d("FloatPicture", "隐藏模拟器遮罩: " + emulatorInfo.name + " -> " + maskPictureId);
+            }
+        }
+    }
+    
+    /**
+     * 处理当前应用的遮罩显示
+     */
+    private void handleCurrentAppMaskShow(String currentApp) {
+        if (currentApp == null || currentApp.isEmpty()) {
+            return;
+        }
+        
+        // 检查当前应用是否是模拟器
+        RetroEmulatorDatabase.EmulatorInfo emulatorInfo = EmulatorDetector.checkIfInstalledEmulator(this, currentApp);
+        if (emulatorInfo != null && emulatorMaskConfig.shouldAutoShowMask(currentApp)) {
+            String maskPictureId = emulatorMaskConfig.getMaskPictureId(currentApp);
+            if (maskPictureId != null) {
+                // 显示遮罩
+                ManageMethods.setWindowVisible(this, maskPictureId, true);
+                android.util.Log.d("FloatPicture", "显示模拟器遮罩: " + emulatorInfo.name + " -> " + maskPictureId);
+            }
+        }
+    }
+    
+    /**
+     * 获取模拟器遮罩配置管理器（供外部调用）
+     */
+    public static EmulatorMaskConfig getEmulatorMaskConfig() {
+        if (currentInstance != null) {
+            return currentInstance.emulatorMaskConfig;
+        }
+        return null;
     }
 }
